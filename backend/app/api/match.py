@@ -1,17 +1,13 @@
-from fastapi import APIRouter
+﻿from fastapi import APIRouter
+from app.core.logging import get_logger
+from app.schemas.match import MatchRequest, MatchResponse
 from app.services.matching_service import match_workers
 
-router = APIRouter()
+logger = get_logger(__name__)
+router = APIRouter(prefix="/api/v1", tags=["match"])
 
-
-@router.post("/match")
-def match(data: dict):
-
-    job = data["job"]
-    workers = data["workers"]
-
-    results = match_workers(job, workers)
-
-    return {
-        "matches": results[:10]
-    }
+@router.post("/match", response_model=MatchResponse)
+def match(payload: MatchRequest):
+    logger.info("Received /match request for job=%s and %d workers", payload.job.id, len(payload.workers))
+    results = match_workers(payload.job, payload.workers)
+    return {"matches": results[:10]}

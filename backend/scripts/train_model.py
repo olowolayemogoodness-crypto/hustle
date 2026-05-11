@@ -4,6 +4,7 @@ from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.metrics import accuracy_score
 import joblib
+import logging
 
 # Configure paths
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -49,6 +50,8 @@ accuracy = accuracy_score(y_test, preds)
 
 print("Model Accuracy:", accuracy)
 
-joblib.dump(model, MODEL_PATH)
-
-print("Model saved succcessfully")
+try:
+    joblib.dump(model, MODEL_PATH)
+    print("Model saved successfully")
+except Exception as e:
+    logging.error(f"Error occurred while saving the model: {e}")
