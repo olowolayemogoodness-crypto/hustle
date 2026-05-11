@@ -1,0 +1,72 @@
+name: hustle
+description: hustle — Connect workers to local gigs.
+version: 1.0.0+1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State Management
+  flutter_riverpod: ^2.5.1
+  riverpod_annotation: ^2.3.5
+
+  # Navigation
+  go_router: ^14.0.0
+
+  # Networking
+  dio: ^5.4.3
+  retrofit: ^4.1.0
+  json_annotation: ^4.9.0
+
+  # Maps
+  google_maps_flutter: ^2.6.1
+  geolocator: ^12.0.0
+
+  # Local Storage
+  hive_flutter: ^1.1.0
+  shared_preferences: ^2.2.3
+  flutter_secure_storage: ^9.0.0
+
+  # Supabase
+  supabase_flutter: ^2.4.0
+
+  # Firebase
+  firebase_core: ^3.0.0
+  firebase_messaging: ^15.0.0
+
+  # UI
+  cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
+  google_fonts: ^6.2.1
+  intl: ^0.19.0
+  permission_handler: ^11.3.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  build_runner: ^2.4.9
+  retrofit_generator: ^8.1.0
+  riverpod_generator: ^2.3.11
+  json_serializable: ^6.8.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+  fonts:
+    - family: DMSans
+      fonts:
+        - asset: assets/fonts/dmsans/static/DMSans-Regular.ttf
+        - asset: assets/fonts/dmsans/static/DMSans-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/dmsans/static/DMSans-Bold.ttf
+          weight: 700
+    - family: Syne
+      fonts:
+        - asset: assets/fonts/syne/static/Syne-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/syne/static/Syne-ExtraBold.ttf
+          weight: 800
