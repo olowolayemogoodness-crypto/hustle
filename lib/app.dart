@@ -17,7 +17,7 @@ class HustleApp extends ConsumerWidget {
     final currentIndex = ref.watch(bottomNavIndexProvider);
 
     final screens = [
-      const DiscoveryPage(),
+      const DiscoveryScreen(),
       const JobDetails(),
       const WalletScreen(),
       const WorkerProfileScreen(),

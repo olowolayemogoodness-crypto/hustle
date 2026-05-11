@@ -22,7 +22,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: Routes.discovery,
-        builder: (context, state) => const DiscoveryPage(),
+        builder: (context, state) => const DiscoveryScreen(),
       ),
       GoRoute(
         path: Routes.jobDetail,
