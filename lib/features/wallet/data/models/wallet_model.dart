@@ -18,7 +18,7 @@ class WalletBalance {
         available: 4735000,   // ₦47,350
         locked: 850000,       // ₦8,500
         totalEarned: 6300000, // ₦63,000 (used for "This Month")
-        thisMonth: 6300000,
+        thisMonth: 63000,
       );
 }
 
