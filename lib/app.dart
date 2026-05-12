@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hustle/features/discovery/presentation/screens/discovery_page.dart';
+import 'package:hustle/features/discovery/presentation/screens/map_view_screen.dart';
+import 'package:hustle/features/jobs/presentation/screens/jobs_details.dart';
 import 'package:hustle/features/profile/presentation/screens/job_details.dart';
 import 'package:hustle/features/profile/presentation/screens/worker_profile_screen.dart';
 import 'package:hustle/features/wallet/presentation/screens/wallet_screen.dart';
@@ -17,8 +18,9 @@ class HustleApp extends ConsumerWidget {
     final currentIndex = ref.watch(bottomNavIndexProvider);
 
     final screens = [
-      const DiscoveryScreen(),
-      const JobDetails(),
+           const DiscoveryScreen(),
+   const MapViewScreen(),
+
       const WalletScreen(),
       const WorkerProfileScreen(),
     ];

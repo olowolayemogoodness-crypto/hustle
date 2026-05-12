@@ -19,15 +19,16 @@ class LGBottomNav extends StatelessWidget {
       backgroundColor: Colors.white,
       indicatorColor: AppColors.primaryGreenLight,
       destinations: const [
-        NavigationDestination(
-          icon: Icon(Icons.map_outlined),
-          selectedIcon: Icon(Icons.map, color: AppColors.primaryGreen),
-          label: 'Discover',
-        ),
+       
         NavigationDestination(
           icon: Icon(Icons.work_outline),
           selectedIcon: Icon(Icons.work, color: AppColors.primaryGreen),
           label: 'Jobs',
+        ),
+         NavigationDestination(
+          icon: Icon(Icons.map_outlined),
+          selectedIcon: Icon(Icons.map, color: AppColors.primaryGreen),
+          label: 'Discover',
         ),
         NavigationDestination(
           icon: Icon(Icons.account_balance_wallet_outlined),
