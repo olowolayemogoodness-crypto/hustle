@@ -1,0 +1,11 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+ENV/
+.env
+pytest.ini
+*.log
+__pycache__/
+.DS_Store
