@@ -1,7 +1,7 @@
 from pathlib import Path
-from typing import List
+from typing import Literal
 
-from pydantic import field_validator
+from pydantic import Field, computed_field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -12,8 +12,8 @@ DOTENV_PATH = ROOT_DIR / ".env"
 
 class Settings(BaseSettings):
     """
-    Central application configuration.
-    Loaded automatically from .env using HUSTLE_ prefix.
+    Centralized application settings.
+    Automatically loaded from .env with HUSTLE_ prefix.
     """
 
     model_config = SettingsConfigDict(
@@ -29,7 +29,12 @@ class Settings(BaseSettings):
     app_name: str = "Hustle Backend"
     app_version: str = "1.0.0"
 
-    environment: str = "development"
+    environment: Literal[
+        "development",
+        "staging",
+        "production",
+    ] = "development"
+
     debug: bool = False
 
     host: str = "0.0.0.0"
@@ -38,44 +43,114 @@ class Settings(BaseSettings):
     api_prefix: str = "/api/v1"
 
     # =========================================================
+    # SUPABASE
+    # =========================================================
+    supabase_url: str = ""
+    supabase_anon_key: str = ""
+    supabase_service_role_key: str = ""
+
+    # =========================================================
+    # DATABASE POOL
+    # =========================================================
+    db_pool_size: int = 20
+    db_max_overflow: int = 10
+    db_pool_timeout: int = 30
+    db_pool_recycle: int = 1800
+
+    # =========================================================
+    # SECURITY
+    # =========================================================
+    access_token_expire_minutes: int = 60
+    refresh_token_expire_days: int = 30
+
+    # =========================================================
+    # RATE LIMITING
+    # =========================================================
+    rate_limit_per_minute: int = 60
+
+    # =========================================================
+    # OTP
+    # =========================================================
+    otp_expiry_minutes: int = 5
+    otp_max_attempts: int = 3
+
+    # =========================================================
     # DATABASE
     # =========================================================
-    database_url: str = ""
+    database_url: str = Field(
+        default="",
+        description="Async PostgreSQL connection string",
+    )
 
     # =========================================================
     # SECURITY / JWT
     # =========================================================
-    jwt_secret: str = "change_me"
-    jwt_expire_minutes: int = 10080  # 7 days
+    jwt_secret: str = Field(
+        default="change_me",
+        min_length=16,
+    )
+
+    jwt_expire_minutes: int = Field(
+        default=10080,
+        gt=0,
+    )
 
     # =========================================================
     # TERMII SMS
     # =========================================================
     termii_api_key: str = ""
-    termii_sender_id: str = "LocGig"
+    termii_sender_id: str = "Hustle"
 
     # =========================================================
     # LOGGING
     # =========================================================
-    logging_level: str = "INFO"
+    logging_level: Literal[
+        "DEBUG",
+        "INFO",
+        "WARNING",
+        "ERROR",
+        "CRITICAL",
+    ] = "INFO"
 
     # =========================================================
     # ML MODEL
     # =========================================================
     model_relative_path: str = "../scripts/model.joblib"
 
-    rule_weight: float = 0.65
-    ml_weight: float = 0.35
+    rule_weight: float = Field(
+        default=0.65,
+        ge=0,
+        le=1,
+    )
 
-    fallback_probability: float = 0.5
-    match_threshold: float = 0.0
+    ml_weight: float = Field(
+        default=0.35,
+        ge=0,
+        le=1,
+    )
 
-    max_workers_evaluated: int = 50
+    fallback_probability: float = Field(
+        default=0.5,
+        ge=0,
+        le=1,
+    )
+
+    match_threshold: float = Field(
+        default=0.0,
+        ge=0,
+        le=1,
+    )
+
+    max_workers_evaluated: int = Field(
+        default=50,
+        ge=1,
+        le=1000,
+    )
 
     # =========================================================
     # FEATURE ENGINEERING
     # =========================================================
-    feature_columns: List[str] = [
+    feature_columns: list[str] = [
         "distance_km",
         "skill_overlap",
         "trust_score",
@@ -88,52 +163,37 @@ class Settings(BaseSettings):
     # =========================================================
     # CORS
     # =========================================================
-    allowed_origins: List[str] = [
+    allowed_origins: list[str] = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
     ]
 
     # =========================================================
-    # COMPUTED PATHS
+    # COMPUTED PROPERTIES
     # =========================================================
     @property
     def model_path(self) -> str:
-        return str((BASE_DIR / self.model_relative_path).resolve())
+        return str(
+            (BASE_DIR / self.model_relative_path).resolve()
+        )
 
-    # =========================================================
-    # VALIDATORS
-    # =========================================================
-    @field_validator("environment")
-    @classmethod
-    def validate_environment(cls, v: str) -> str:
-        allowed = {"development", "staging", "production"}
-        if v not in allowed:
-            raise ValueError(
-                f"environment must be one of {allowed}"
-            )
-        return v
-
-    @field_validator("rule_weight")
-    @classmethod
-    def validate_rule_weight(cls, v: float) -> float:
-        if not 0 <= v <= 1:
-            raise ValueError("rule_weight must be between 0 and 1")
-        return v
-
-    @field_validator("ml_weight")
-    @classmethod
-    def validate_ml_weight(cls, v: float) -> float:
-        if not 0 <= v <= 1:
-            raise ValueError("ml_weight must be between 0 and 1")
-        return v
-
+    @computed_field
     @property
     def total_weight(self) -> float:
-        return self.rule_weight + self.ml_weight
+        return round(
+            self.rule_weight + self.ml_weight,
+            4,
+        )
 
+    @computed_field
     @property
     def is_production(self) -> bool:
         return self.environment == "production"
+
+    @computed_field
+    @property
+    def is_development(self) -> bool:
+        return self.environment == "development"
 
 
 settings = Settings()
