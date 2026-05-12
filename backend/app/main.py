@@ -4,6 +4,7 @@ from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.health import router as health_router
 from app.api.match import router as match_router
@@ -16,9 +17,8 @@ from app.ml import model as ml_model
 configure_logging()
 logger = get_logger(__name__)
 
-
 @asynccontextmanager
-def lifespan(app: FastAPI):
+async def lifespan(app: FastAPI):
     logger.info("Starting Hustle backend")
     ml_model.load_model()
     if ml_model.check_model_ready():
@@ -35,6 +35,14 @@ app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=li
 app.include_router(health_router)
 app.include_router(predict_router)
 app.include_router(match_router)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.allowed_origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+    extra="ignore",
+)
 
 
 @app.middleware("http")
