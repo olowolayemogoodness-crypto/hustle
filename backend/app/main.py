@@ -1,4 +1,6 @@
-﻿from fastapi import FastAPI, Request, status
+﻿from contextlib import asynccontextmanager
+
+from fastapi import FastAPI, Request, status
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -14,27 +16,25 @@ from app.ml import model as ml_model
 configure_logging()
 logger = get_logger(__name__)
 
-app = FastAPI(title=settings.app_name, version=settings.app_version)
 
-# Routes
-app.include_router(health_router)
-app.include_router(predict_router)
-app.include_router(match_router)
-
-
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+def lifespan(app: FastAPI):
     logger.info("Starting Hustle backend")
     ml_model.load_model()
     if ml_model.check_model_ready():
         logger.info("ML model ready for inference")
     else:
         logger.warning("ML model is not ready: inference will use fallback probabilities")
-
-
-@app.on_event("shutdown")
-async def shutdown_event():
+    yield
     logger.info("Shutting down Hustle backend")
+
+
+app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=lifespan)
+
+# Routes
+app.include_router(health_router)
+app.include_router(predict_router)
+app.include_router(match_router)
 
 
 @app.middleware("http")

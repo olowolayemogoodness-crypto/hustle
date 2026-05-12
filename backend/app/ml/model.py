@@ -3,7 +3,7 @@ from typing import Any, Dict, Optional
 
 import joblib
 import numpy as np
-
+import pandas as pd
 from app.config import settings
 from app.core.exceptions import MLModelError, ValidationError
 from app.core.logging import get_logger
@@ -47,7 +47,7 @@ def predict_success(features: Dict[str, Any]) -> float:
             logger.warning("Model unavailable; using fallback probability")
             return float(settings.fallback_probability)
 
-        X = np.asarray([[sanitized[column] for column in settings.feature_columns]], dtype=float)
+        X = pd.DataFrame([sanitized], columns=settings.feature_columns)
         assert _model is not None
         proba = _model.predict_proba(X)[0][1]
         probability = float(np.clip(proba, 0.0, 1.0))

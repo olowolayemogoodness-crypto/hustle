@@ -31,7 +31,7 @@ def match_workers(job: JobBase, workers: List[WorkerResponse]) -> List[Dict[str,
     results: List[Dict[str, Any]] = []
 
     for worker in ordered_workers:
-        worker_data = worker.dict()
+        worker_data = worker.model_dump()
         skill_overlap = worker_data.get("skill_overlap")
         if skill_overlap is None:
             skill_overlap = compute_skill_overlap(job.required_skills, worker_data.get("skills", []))
@@ -60,8 +60,11 @@ def match_workers(job: JobBase, workers: List[WorkerResponse]) -> List[Dict[str,
 
         ml_probability = predict_success(features)
         final_score = settings.rule_weight * match_score + settings.ml_weight * ml_probability
-        explanation = generate_explanation(worker_data, trust_score)
+        if final_score < settings.match_threshold:
+            logger.debug("Worker %s did not meet threshold %.4f", worker_data.get("id"), settings.match_threshold)
+            continue
 
+        explanation = generate_explanation(worker_data, trust_score)
         results.append(
             {
                 "worker_id": worker_data.get("id", 0),
