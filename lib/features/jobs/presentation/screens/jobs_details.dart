@@ -74,8 +74,8 @@ class _DiscoveryHeader extends ConsumerWidget {
                         text: '$greeting, Emeka ',
                         style: const TextStyle(
                           fontFamily: 'Syne',
-                          fontSize: 22,
-                          fontWeight: FontWeight.w800,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w200,
                           color: AppColors.textPrimary,
                         ),
                       ),

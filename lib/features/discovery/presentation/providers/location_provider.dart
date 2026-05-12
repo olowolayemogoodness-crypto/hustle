@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:geolocator/geolocator.dart';
+
 import 'package:hustle/core/utils/location_utils.dart';
 import 'package:latlong2/latlong.dart';
 
