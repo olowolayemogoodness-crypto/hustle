@@ -4,9 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/config/theme.dart';
 import '../../../../core/router/routes.dart';
-import '../../../auth/presentation/screens/phone_auth_screen.dart'; // _GlowButton, _CircleBackButton
-import '../../../auth/presentation/screens/role_select_screen.dart'; // _StepIndicator
-
+// _GlowButton, _CircleBackButton
+import '../../../auth/presentation/screens/role_select_screen.dart' ; // _StepIndicator
 // ── Skill model ──────────────────────────────────────────────────────────
 
 class _Skill {
@@ -508,6 +507,28 @@ class _JobTypeSelector extends StatelessWidget {
             ),
           );
         }),
+      ),
+    );
+  }
+}
+
+class CircleBackButton extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () => context.canPop() ? context.pop() : null,
+      child: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: const Color(0xFFF2F2F2),
+          shape: BoxShape.circle,
+        ),
+        child: const Icon(
+          Icons.arrow_back_rounded,
+          size: 20,
+          color: AppColors.textPrimary,
+        ),
       ),
     );
   }

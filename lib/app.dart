@@ -1,46 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:hustle/features/auth/presentation/screens/otp_screen.dart';
-import 'package:hustle/features/auth/presentation/screens/phone_auth_screen.dart';
-import 'package:hustle/features/discovery/presentation/screens/map_view_screen.dart';
-import 'package:hustle/features/jobs/presentation/screens/jobs_details.dart';
-import 'package:hustle/features/profile/presentation/screens/job_details.dart';
-import 'package:hustle/features/profile/presentation/screens/worker_profile_screen.dart';
-import 'package:hustle/features/wallet/presentation/screens/wallet_screen.dart';
-
-import 'shared/widgets/bottom_nav.dart';
-
-final bottomNavIndexProvider = StateProvider<int>((ref) => 0);
+import 'core/router/app_router.dart';
 
 class HustleApp extends ConsumerWidget {
   const HustleApp({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final currentIndex = ref.watch(bottomNavIndexProvider);
+    final router = ref.watch(appRouterProvider);
 
-    final screens = [
-      
-           const OtpScreen(phone:'09132585172' ,),
-   const MapViewScreen(),
-
-      const WalletScreen(),
-      const WorkerProfileScreen(),
-    ];
-
-    void onTap(int index) {
-      ref.read(bottomNavIndexProvider.notifier).state = index;
-    }
-
-    return MaterialApp(
+    return MaterialApp.router(
       debugShowCheckedModeBanner: false,
-      home: Scaffold(
-        body: screens[currentIndex],
-        bottomNavigationBar: LGBottomNav(
-          currentIndex: currentIndex,
-          onTap: onTap,
-        ),
-      ),
+      title: 'Hustle',
+      routerConfig: router,
     );
   }
 }

@@ -1,62 +1,52 @@
+import 'package:supabase_flutter/supabase_flutter.dart' show User;
+
 class AuthUser {
   const AuthUser({
     required this.id,
     required this.phone,
+    this.email,
     this.role,
     this.kycStatus = 'unverified',
-    this.isNewUser = false,
     this.fullName,
     this.avatarUrl,
+    this.isNewUser = false,
   });
 
-  final String id;
-  final String phone;
+  final String  id;
+  final String? phone;
+  final String? email;
   final String? role;
-  final String kycStatus;
-  final bool isNewUser;
+  final String  kycStatus;
   final String? fullName;
   final String? avatarUrl;
+  final bool    isNewUser;
 
   bool get isWorker   => role == 'worker';
   bool get isEmployer => role == 'employer';
-  bool get needsRole  => role == null;
+  bool get needsRole  => role == null || role!.isEmpty;
   bool get isVerified => kycStatus == 'verified';
 
-  factory AuthUser.fromJson(Map<String, dynamic> json) => AuthUser(
-        id: json['id'] as String,
-        phone: json['phone'] as String,
-        role: json['role'] as String?,
-        kycStatus: json['kyc_status'] as String? ?? 'unverified',
-        isNewUser: json['is_new_user'] as bool? ?? false,
-        fullName: json['full_name'] as String?,
-        avatarUrl: json['avatar_url'] as String?,
-      );
+  factory AuthUser.fromSupabase(User user, {bool isNew = false}) {
+    final meta = user.userMetadata ?? {};
+    return AuthUser(
+      id:        user.id,
+      phone:     user.phone,
+      email:     user.email,
+      role:      meta['role']       as String?,
+      kycStatus: meta['kyc_status'] as String? ?? 'unverified',
+      fullName:  meta['full_name']  as String?,
+      avatarUrl: meta['avatar_url'] as String?,
+      isNewUser: isNew,
+    );
+  }
 
   AuthUser copyWith({String? role, String? kycStatus}) => AuthUser(
-        id: id,
-        phone: phone,
-        role: role ?? this.role,
-        kycStatus: kycStatus ?? this.kycStatus,
-        isNewUser: isNewUser,
-        fullName: fullName,
-        avatarUrl: avatarUrl,
-      );
-}
-
-class AuthSession {
-  const AuthSession({
-    required this.token,
-    required this.user,
-    required this.expiresIn,
-  });
-
-  final String token;
-  final AuthUser user;
-  final int expiresIn;
-
-  factory AuthSession.fromJson(Map<String, dynamic> json) => AuthSession(
-        token: json['access_token'] as String,
-        expiresIn: json['expires_in'] as int,
-        user: AuthUser.fromJson(json['user'] as Map<String, dynamic>),
-      );
+    id:        id,
+    phone:     phone,
+    email:     email,
+    role:      role      ?? this.role,
+    kycStatus: kycStatus ?? this.kycStatus,
+    fullName:  fullName,
+    avatarUrl: avatarUrl,
+  );
 }
