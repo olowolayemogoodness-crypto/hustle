@@ -388,7 +388,7 @@ class _SearchAndToggleRow extends ConsumerWidget {
           isActive: !isListView,
           onTap: () {
             ref.read(viewToggleProvider.notifier).toggleToMap();
-            context.go(Routes.discovery);
+            context.go(Routes.mapView);
           },
         ),
         const SizedBox(width: 6),

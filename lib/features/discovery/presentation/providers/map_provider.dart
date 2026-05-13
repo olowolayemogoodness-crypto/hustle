@@ -11,20 +11,23 @@ class MapState {
     this.cameraPosition = kDefaultLagosCenter,
     this.zoom = kDefaultZoom,
     this.isFollowingUser = true,
+    this.routePoints = const [],  // ← add
   });
+
 
   final String? selectedJobId;
   final LatLng? userPosition;
   final LatLng cameraPosition;
   final double zoom;
   final bool isFollowingUser;
-
+  final List<LatLng> routePoints;
   MapState copyWith({
     String? selectedJobId,
     LatLng? userPosition,
     LatLng? cameraPosition,
     double? zoom,
     bool? isFollowingUser,
+    List<LatLng>? routePoints,
     bool clearSelection = false,
   }) {
     return MapState(
@@ -33,6 +36,7 @@ class MapState {
       cameraPosition: cameraPosition ?? this.cameraPosition,
       zoom: zoom ?? this.zoom,
       isFollowingUser: isFollowingUser ?? this.isFollowingUser,
+      routePoints: routePoints ?? this.routePoints,
     );
   }
 }
@@ -48,6 +52,13 @@ class MapNotifier extends Notifier<MapState> {
   void clearSelection() {
     state = state.copyWith(clearSelection: true);
   }
+  void setRoute(List<LatLng> points) {
+  state = state.copyWith(routePoints: points);
+}
+
+void clearRoute() {
+  state = state.copyWith(routePoints: []);
+}
 
   void updateUserPosition(LatLng position) {
     state = state.copyWith(
@@ -67,6 +78,10 @@ class MapNotifier extends Notifier<MapState> {
         isFollowingUser: true,
       );
     }
+  }
+
+  void updateCameraPosition(LatLng position) {
+    state = state.copyWith(cameraPosition: position, isFollowingUser: false);
   }
 }
 

@@ -1,20 +1,25 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import 'package:hustle/core/utils/location_utils.dart';
 import 'package:latlong2/latlong.dart';
-
 import 'map_provider.dart';
 
 class LocationNotifier extends AsyncNotifier<LatLng?> {
   @override
   Future<LatLng?> build() async {
+    // Get initial position
     final position = await LocationUtils.getCurrentPosition();
     if (position == null) return null;
 
     final latLng = LatLng(position.latitude, position.longitude);
-
-    // Push into map state immediately
     ref.read(mapProvider.notifier).updateUserPosition(latLng);
+
+    // ← Start live stream from here, not from the screen
+    ref.listen(positionStreamProvider, (_, next) {
+      next.whenData((latlng) {
+        ref.read(mapProvider.notifier).updateUserPosition(latlng);
+      });
+    });
+
     return latLng;
   }
 
@@ -33,9 +38,7 @@ class LocationNotifier extends AsyncNotifier<LatLng?> {
 final locationProvider =
     AsyncNotifierProvider<LocationNotifier, LatLng?>(LocationNotifier.new);
 
-// Stream-based live position updates
 final positionStreamProvider = StreamProvider<LatLng>((ref) {
-  return LocationUtils.positionStream().map(
-    (p) => LatLng(p.latitude, p.longitude),
-  );
+  return LocationUtils.positionStream()
+      .map((p) => LatLng(p.latitude, p.longitude));
 });

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:hustle/core/router/routes.dart';
+import 'package:hustle/core/supabase/supabase_config.dart';
 import 'package:hustle/features/auth/presentation/providers/auth_provider.dart';
 
 
@@ -22,6 +23,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void initState() {
     super.initState();
+
+    // Add this temporarily anywhere in your Flutter app
+// e.g. in splash screen initState just to grab the token
+
+final session = SupabaseConfig.auth.currentSession;
+print('TOKEN: ${session?.accessToken}');
 
     _controller = AnimationController(
       vsync: this,

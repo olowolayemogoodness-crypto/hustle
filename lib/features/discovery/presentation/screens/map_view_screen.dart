@@ -3,6 +3,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hustle/core/services/nominatim_service.dart';
 
 import 'package:latlong2/latlong.dart';
 import '../../../jobs/data/models/job_model.dart';
@@ -10,6 +11,7 @@ import '../../../jobs/data/models/job_model.dart';
 
 import '../../../../core/config/app_config.dart';
 import '../../../../core/config/theme.dart';
+import '../../../../core/services/osrm_service.dart';
 import '../../../../core/services/tile_cache_service.dart';
 import '../../../../core/utils/formatters.dart';
 
@@ -46,20 +48,17 @@ class _MapViewScreenState extends ConsumerState<MapViewScreen>
       CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
 
-    // Start live position stream
+    // Listen to location updates for map following
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _startLocationStream();
-    });
-  }
-
-  void _startLocationStream() {
-    ref.listenManual(positionStreamProvider, (_, next) {
-      next.whenData((latLng) {
-        ref.read(mapProvider.notifier).updateUserPosition(latLng);
-        final mapState = ref.read(mapProvider);
-        if (mapState.isFollowingUser) {
-          _mapController.move(latLng, _mapController.camera.zoom);
-        }
+      ref.listenManual(locationProvider, (_, next) {
+        next.whenData((latLng) {
+          if (latLng != null) {
+            final mapState = ref.read(mapProvider);
+            if (mapState.isFollowingUser) {
+              _mapController.move(latLng, _mapController.camera.zoom);
+            }
+          }
+        });
       });
     });
   }
@@ -144,6 +143,8 @@ class _MapViewScreenState extends ConsumerState<MapViewScreen>
           ref.read(mapProvider.notifier).clearSelection();
         },
         onMapEvent: (event) {
+
+
           // Stop following user when they manually pan
           if (event is MapEventScrollWheelZoom ||
               event is MapEventMove) {
@@ -186,7 +187,19 @@ class _MapViewScreenState extends ConsumerState<MapViewScreen>
             );
           }).toList(),
         ),
-
+// In _buildMap — add after MarkerLayer
+if (mapState.routePoints.isNotEmpty)
+  PolylineLayer(
+    polylines: [
+      Polyline(
+        points: mapState.routePoints,
+        strokeWidth: 4.0,
+        color: AppColors.primaryGreen,
+        borderStrokeWidth: 1.5,
+        borderColor: Colors.white,
+      ),
+    ],
+  ),
         // ── User Location Marker ──
         if (mapState.userPosition != null)
           MarkerLayer(
@@ -229,73 +242,153 @@ class _TopSafeArea extends StatelessWidget {
 
 // ─────────────────────────── Map Search Bar ────────────────────────────
 
-class _MapSearchBar extends StatelessWidget {
+class _MapSearchBar extends ConsumerStatefulWidget {
+  @override
+  ConsumerState<_MapSearchBar> createState() => _MapSearchBarState();
+}
+
+class _MapSearchBarState extends ConsumerState<_MapSearchBar> {
+  final _controller = TextEditingController();
+  List<NominatimResult> _results = [];
+  bool _searching = false;
+
+  Future<void> _onChanged(String query) async {
+    if (query.length < 3) {
+      setState(() => _results = []);
+      return;
+    }
+    setState(() => _searching = true);
+    final results = await NominatimService.search(query);
+    setState(() { _results = results; _searching = false; });
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return Column(
       children: [
-        Expanded(
-          child: Container(
-            height: 48,
+        // Search bar row
+        Row(
+          children: [
+            Expanded(
+              child: Container(
+                height: 48,
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(14),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.12),
+                      blurRadius: 12,
+                      offset: const Offset(0, 3),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    const SizedBox(width: 12),
+                    _searching
+                        ? const SizedBox(
+                            width: 18, height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: AppColors.primaryGreen,
+                            ),
+                          )
+                        : const Icon(Icons.search_rounded,
+                            color: AppColors.textSecondary, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: TextField(
+                        controller: _controller,
+                        onChanged: _onChanged,
+                        decoration: const InputDecoration(
+                          hintText: 'Search nearby jobs or location...',
+                          hintStyle: TextStyle(
+                            fontFamily: 'DMSans',
+                            fontSize: 13.5,
+                            color: AppColors.textHint,
+                          ),
+                          border: InputBorder.none,
+                          isDense: true,
+                          contentPadding: EdgeInsets.zero,
+                        ),
+                      ),
+                    ),
+                    if (_controller.text.isNotEmpty)
+                      GestureDetector(
+                        onTap: () {
+                          _controller.clear();
+                          setState(() => _results = []);
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.all(8),
+                          child: Icon(Icons.close_rounded,
+                              size: 18, color: AppColors.textSecondary),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              width: 48, height: 48,
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.12),
+                    blurRadius: 12,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.tune_rounded,
+                  color: AppColors.textSecondary, size: 22),
+            ),
+          ],
+        ),
+
+        // Search results dropdown
+        if (_results.isNotEmpty)
+          Container(
+            margin: const EdgeInsets.only(top: 6),
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(14),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.12),
-                  blurRadius: 12,
-                  offset: const Offset(0, 3),
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
-            child: Row(
-              children: [
-                const SizedBox(width: 12),
-                const Icon(Icons.search_rounded,
-                    color: AppColors.textSecondary, size: 20),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: TextField(
-                    decoration: const InputDecoration(
-                      hintText: 'Search nearby jobs...',
-                      hintStyle: TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 13.5,
-                        color: AppColors.textHint,
-                      ),
-                      border: InputBorder.none,
-                      isDense: true,
-                      contentPadding: EdgeInsets.zero,
-                    ),
-                    style: const TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 13.5,
-                      color: AppColors.textPrimary,
-                    ),
+            child: Column(
+              children: _results.map((r) => ListTile(
+                leading: const Icon(Icons.location_on_outlined,
+                    color: AppColors.primaryGreen, size: 20),
+                title: Text(
+                  r.displayName,
+                  style: const TextStyle(
+                    fontFamily: 'DMSans',
+                    fontSize: 13,
+                    color: AppColors.textPrimary,
                   ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ],
+                onTap: () {
+                  _controller.clear();
+                  setState(() => _results = []);
+                  // Move map to selected location
+                  ref.read(mapProvider.notifier)
+                      .updateCameraPosition(r.latLng);
+                },
+              )).toList(),
             ),
           ),
-        ),
-        const SizedBox(width: 10),
-        Container(
-          width: 48,
-          height: 48,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(14),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.12),
-                blurRadius: 12,
-                offset: const Offset(0, 3),
-              ),
-            ],
-          ),
-          child: const Icon(Icons.tune_rounded,
-              color: AppColors.textSecondary, size: 22),
-        ),
       ],
     );
   }
@@ -323,38 +416,47 @@ class _DefaultPin extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-          decoration: BoxDecoration(
-            color: AppColors.primaryGreen,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryGreen.withOpacity(0.4),
-                blurRadius: 6,
-                offset: const Offset(0, 3),
+    return SizedBox(
+      width: 90,
+      height: 36,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 90,
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: AppColors.primaryGreen,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryGreen.withOpacity(0.4),
+                  blurRadius: 6,
+                  offset: const Offset(0, 3),
+                ),
+              ],
+            ),
+            child: Center(
+              child: Text(
+                Formatters.naira(job.payKobo),
+                style: const TextStyle(
+                  fontFamily: 'Syne',
+                  fontSize: 12,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
               ),
-            ],
-          ),
-          child: Text(
-            Formatters.naira(job.payKobo),
-            style: const TextStyle(
-              fontFamily: 'Syne',
-              fontSize: 12,
-              fontWeight: FontWeight.w800,
-              color: Colors.white,
             ),
           ),
-        ),
-        // Pin tail
-        CustomPaint(
-          size: const Size(10, 6),
-          painter: _PinTailPainter(color: AppColors.primaryGreen),
-        ),
-      ],
+          // Pin tail
+          CustomPaint(
+            size: const Size(10, 6),
+            painter: _PinTailPainter(color: AppColors.primaryGreen),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -365,86 +467,99 @@ class _SelectedPin extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          decoration: BoxDecoration(
-            color: AppColors.primaryGreen,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryGreen.withOpacity(0.5),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.bolt_rounded,
-                    color: job.accentColor.color,
-                    size: 13,
-                  ),
-                  const SizedBox(width: 3),
-                  Text(
-                    Formatters.naira(job.payKobo),
-                    style: const TextStyle(
-                      fontFamily: 'Syne',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w800,
-                      color: Colors.white,
+    return SizedBox(
+      width: 170,
+      height: 58,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 170,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+            decoration: BoxDecoration(
+              color: AppColors.primaryGreen,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryGreen.withOpacity(0.5),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.bolt_rounded,
+                      color: job.accentColor.color,
+                      size: 13,
                     ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 2),
-              Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    job.title,
-                    style: const TextStyle(
-                      fontFamily: 'DMSans',
-                      fontSize: 10.5,
-                      color: Colors.white70,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  Container(
-                    margin: const EdgeInsets.only(left: 6),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 5, vertical: 2),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: Text(
-                      job.distanceDisplay,
-                      style: const TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 9.5,
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
+                    const SizedBox(width: 3),
+                    Flexible(
+                      child: Text(
+                        Formatters.naira(job.payKobo),
+                        style: const TextStyle(
+                          fontFamily: 'Syne',
+                          fontSize: 14,
+                          fontWeight: FontWeight.w800,
+                          color: Colors.white,
+                        ),
+                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+                const SizedBox(height: 2),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Expanded(
+                      child: Text(
+                        job.title,
+                        style: const TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 10.5,
+                          color: Colors.white70,
+                          fontWeight: FontWeight.w500,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.only(left: 6),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        job.distanceDisplay,
+                        style: const TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 9.5,
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-        CustomPaint(
-          size: const Size(12, 7),
-          painter: _PinTailPainter(color: AppColors.primaryGreen),
-        ),
-      ],
+          CustomPaint(
+            size: const Size(12, 7),
+            painter: _PinTailPainter(color: AppColors.primaryGreen),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -782,7 +897,19 @@ class _MapJobCard extends ConsumerWidget {
                 ),
                 const Spacer(),
                 GestureDetector(
-                  onTap: () {},
+                  onTap: () async {
+                    final userPos = ref.read(mapProvider).userPosition;
+                    if (userPos == null) return;
+
+                    final route = await OsrmService.getRoute(
+                      origin: userPos,
+                      destination: LatLng(job.latitude, job.longitude),
+                    );
+
+                    if (route != null) {
+                      ref.read(mapProvider.notifier).setRoute(route.polylinePoints);
+                    }
+                  },
                   child: Container(
                     padding: const EdgeInsets.symmetric(
                         horizontal: 10, vertical: 5),
