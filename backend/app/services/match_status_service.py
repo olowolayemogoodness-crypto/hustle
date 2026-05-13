@@ -1,5 +1,6 @@
 from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.models.match_log import MatchLog
 from app.services.uuid_utils import parse_uuid, split_match_log_id
@@ -18,7 +19,7 @@ async def update_match_status(
     match_log = None
     try:
         match_log = await session.get(MatchLog, parse_uuid(match_log_id))
-    except Exception:
+    except (TypeError, ValueError, SQLAlchemyError):
         match_log = None
 
     # If not found by ID, try to find by job_id-worker_id composite key
@@ -35,7 +36,7 @@ async def update_match_status(
             )
             result = await session.execute(stmt)
             match_log = result.scalar_one_or_none()
-        except Exception:
+        except (TypeError, ValueError, SQLAlchemyError):
             pass
 
     if match_log is None:

@@ -40,7 +40,7 @@ def generate_explanation(features: Dict[str, Any], risk_penalty: float, confiden
         elif confidence < 0.5:
             warnings.append("Moderate confidence; consider reviewing alternatives")
 
-    except Exception as exc:
+    except (TypeError, ValueError) as exc:
         logger.exception("Explanation generation failed: %s", exc)
 
     if not strengths:

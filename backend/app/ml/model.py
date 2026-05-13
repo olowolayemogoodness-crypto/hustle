@@ -60,6 +60,3 @@ def predict_success(features: Dict[str, Any]) -> float:
         logger.exception("Prediction failed: %s", exc)
         return float(settings.fallback_probability)
 
-
-load_model()
-

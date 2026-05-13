@@ -100,11 +100,6 @@ class WorkerProfile(Base):
         nullable=True,
     )
 
-    last_location = mapped_column(
-        Geography(geometry_type="POINT", srid=4326),
-        nullable=True,
-    )
-
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
         server_default=func.now(),

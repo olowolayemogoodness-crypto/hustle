@@ -5,6 +5,7 @@ Decoupled from matching logic, won't crash if persistence fails.
 from dataclasses import dataclass, asdict
 from typing import Any, List
 
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.models.match_log import MatchLog
@@ -71,6 +72,6 @@ async def persist_match_events(
     try:
         await session.commit()
         return len(logs)
-    except Exception:
+    except SQLAlchemyError:
         await session.rollback()
         raise

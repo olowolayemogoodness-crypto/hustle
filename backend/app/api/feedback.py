@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -39,6 +40,6 @@ async def submit_feedback(
         )
     except HTTPException:
         raise
-    except Exception as err:
+    except SQLAlchemyError as err:
         logger.error("Failed to record feedback: %s", err, exc_info=True)
-        raise HTTPException(status_code=500, detail="Failed to record feedback")
+        raise HTTPException(status_code=500, detail="Database error while recording feedback")

@@ -1,5 +1,6 @@
-﻿from fastapi import APIRouter, Depends
+﻿from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.config import settings
@@ -53,7 +54,7 @@ async def match(
         events = worker_scores_to_events(payload.job.id, ranked)
         persisted = await persist_match_events(db, events)
         logger.info("Persisted %d match events for job=%s", persisted, payload.job.id)
-    except Exception as err:
+    except SQLAlchemyError as err:
         logger.error("Failed to log match events: %s", err, exc_info=True)
         # Continue — logging failure should not break the API response
     
@@ -119,7 +120,7 @@ async def get_match_history(
     try:
         parsed_job_id = parse_uuid(job_id)
     except (TypeError, ValueError):
-        parsed_job_id = None
+        raise HTTPException(status_code=400, detail="Invalid job_id format")
 
     stmt = select(MatchLog).where(MatchLog.job_id == parsed_job_id).order_by(MatchLog.created_at.desc())
     result = await db.execute(stmt)
