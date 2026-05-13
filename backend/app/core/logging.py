@@ -12,5 +12,4 @@ def configure_logging() -> None:
 
 
 def get_logger(name: str) -> logging.Logger:
-    configure_logging()
     return logging.getLogger(name)

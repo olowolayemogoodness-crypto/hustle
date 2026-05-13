@@ -16,14 +16,15 @@ from app.db.deps import get_db
 from app.main import app
 
 
-pytest_plugins = ("pytest_asyncio",)
-
-
 @pytest.fixture(scope="session", autouse=True)
 def init_test_db():
     """Initialize database schema once per test session."""
     if TEST_DB_PATH.exists():
-        TEST_DB_PATH.unlink()
+        try:
+            TEST_DB_PATH.unlink(missing_ok=True)
+        except PermissionError:
+            # If the test database file is locked by another process, leave it in place.
+            pass
     asyncio.run(init_models())
 
 

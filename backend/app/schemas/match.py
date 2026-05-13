@@ -16,7 +16,7 @@ class MatchExplanation(BaseModel):
 
 class WorkerScore(BaseModel):
     """Structured worker score from ranking engine."""
-    worker_id: int
+    worker_id: str | int
     final_score: float = Field(..., ge=0.0, le=1.0)
     rule_score: float = Field(..., ge=0.0, le=1.0)
     ml_probability: float = Field(..., ge=0.0, le=1.0)
@@ -33,9 +33,8 @@ class MatchResponse(BaseModel):
     """Response from matching engine with ranked workers and recommendations."""
     model_config = ConfigDict(populate_by_name=True)
 
-    job_id: int
+    job_id: str
     ranked_workers: List[WorkerScore] = Field(default_factory=list)
-    matches: List[WorkerScore] = Field(default_factory=list)
     recommended_worker_ids: List[int] = Field(
         default_factory=list,
         description="Top workers recommended for selection (multi-worker support)",
@@ -43,8 +42,8 @@ class MatchResponse(BaseModel):
 
 
 class AcceptMatchRequest(BaseModel):
-    job_id: int
-    worker_id: int
+    job_id: str | int
+    worker_id: str | int
 
 
 class AcceptMatchResponse(BaseModel):

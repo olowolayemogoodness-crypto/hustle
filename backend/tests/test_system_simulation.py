@@ -52,16 +52,16 @@ class TestSystemSimulation:
             match_payload = {"job": job, "workers": workers}
             response = client.post("/api/v1/match", json=match_payload)
             assert response.status_code == 200
-            matches = response.json()["matches"]
+            ranked_workers = response.json()["ranked_workers"]
 
             # Record top match score
-            if matches:
-                top_score = matches[0]["final_score"]
+            if ranked_workers:
+                top_score = ranked_workers[0]["final_score"]
                 job_results.append(top_score)
 
                 # Simulate random acceptance (70% acceptance rate)
                 if random.random() < 0.7:
-                    worker_id = matches[0]["worker_id"]
+                    worker_id = ranked_workers[0]["worker_id"]
                     accept_payload = {"job_id": job_id, "worker_id": worker_id}
                     client.post("/api/v1/match/accept", json=accept_payload)
 

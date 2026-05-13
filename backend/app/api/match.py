@@ -61,9 +61,8 @@ async def match(
     # Step 4: Return response
     top_ranked = ranked[:10]
     return MatchResponse(
-        job_id=payload.job.id,
+        job_id=str(payload.job.id),
         ranked_workers=top_ranked,
-        matches=top_ranked,
         recommended_worker_ids=recommended_ids,
     )
 
@@ -83,7 +82,7 @@ async def accept_match(
     )
 
     if match_log is None:
-        return AcceptMatchResponse(match_log_id=match_log_id, accepted=False)
+        raise HTTPException(status_code=404, detail="Match log entry not found")
 
     return AcceptMatchResponse(
         match_log_id=str(match_log.id),
@@ -101,9 +100,12 @@ async def update_match_state(
     No rejection semantics — just state tracking.
     """
     logger.info("Updating match %s status to %s", payload.match_log_id, payload.status)
-    await update_match_status(db, payload.match_log_id, payload.status)
+    match_log = await update_match_status(db, payload.match_log_id, payload.status)
+    if match_log is None:
+        raise HTTPException(status_code=404, detail="Match log entry not found")
+
     return MatchStatusResponse(
-        match_log_id=payload.match_log_id,
+        match_log_id=str(match_log.id),
         status=payload.status,
         message=f"Match marked as {payload.status}",
     )

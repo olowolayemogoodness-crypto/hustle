@@ -132,6 +132,7 @@ def test_match_endpoint_returns_sorted_matches(client):
     assert all("worker_id" in item for item in result["ranked_workers"])
     assert "recommended_worker_ids" in result
     assert isinstance(result["recommended_worker_ids"], list)
+    assert "matches" not in result
 
 
 @pytest.mark.asyncio

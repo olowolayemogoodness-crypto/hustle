@@ -44,9 +44,9 @@ class TestFeedbackLoop:
         response = client.post("/api/v1/match", json=match_payload)
         assert response.status_code == 200
         match_result = response.json()
-        assert len(match_result["matches"]) > 0
+        assert len(match_result["ranked_workers"]) > 0
 
-        top_match = match_result["matches"][0]
+        top_match = match_result["ranked_workers"][0]
         worker_id = top_match["worker_id"]
 
         # Step 2: Accept the worker

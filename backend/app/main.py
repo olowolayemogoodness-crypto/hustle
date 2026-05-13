@@ -14,6 +14,7 @@ from app.api.analytics import router as analytics_router
 from app.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import request_timing_middleware
+from app.db.init_db import init_models
 from app.ml import model as ml_model
 
 configure_logging()
@@ -22,6 +23,7 @@ logger = get_logger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting Hustle backend")
+    await init_models()
     ml_model.load_model()
     if ml_model.check_model_ready():
         logger.info("ML model ready for inference")
