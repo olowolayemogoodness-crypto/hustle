@@ -18,68 +18,84 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late final Animation<double> _fadeIn;
   late final Animation<double> _scaleIn;
   late final Animation<double> _slideUp;
-@override
-void initState() {
-  super.initState();
 
-  _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(milliseconds: 1100),
-  );
+  @override
+  void initState() {
+    super.initState();
 
-  _fadeIn = CurvedAnimation(
-    parent: _controller,
-    curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-  );
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1100),
+    );
 
-  _scaleIn = Tween<double>(begin: 0.72, end: 1.0).animate(
-    CurvedAnimation(
+    _fadeIn = CurvedAnimation(
       parent: _controller,
-      curve: const Interval(0.0, 0.65, curve: Curves.elasticOut),
-    ),
-  );
+      curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+    );
 
-  _slideUp = Tween<double>(begin: 24.0, end: 0.0).animate(
-    CurvedAnimation(
-      parent: _controller,
-      curve: const Interval(0.3, 0.85, curve: Curves.easeOut),
-    ),
-  );
+    _scaleIn = Tween<double>(begin: 0.72, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.0, 0.65, curve: Curves.elasticOut),
+      ),
+    );
 
-  _controller.forward();
+    _slideUp = Tween<double>(begin: 24.0, end: 0.0).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: const Interval(0.3, 0.85, curve: Curves.easeOut),
+      ),
+    );
 
-  Future.delayed(const Duration(milliseconds: 1400), () {
-    if (!mounted) return;
-    _navigate();
-  });
-}
+    _controller.forward();
 
-void _navigate() {
-  final auth = ref.read(authProvider);
-
-  // If still resolving, wait for the stream to update
-  if (auth is AuthInitial || auth is AuthLoading) {
-    ref.listenManual(authProvider, (_, next) {
-      if (next is AuthInitial || next is AuthLoading) return;
+    // Minimum splash duration to show animation
+    Future.delayed(const Duration(milliseconds: 1400), () {
       if (!mounted) return;
-      _redirectFromState(next);
+      _navigateIfReady();
     });
-    return;
+
+    // Timeout after 3 seconds to prevent infinite loading
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      _navigateIfReady(forceNavigate: true);
+    });
   }
 
-  _redirectFromState(auth);
-}
+  void _navigateIfReady({bool forceNavigate = false}) {
+    final auth = ref.read(authProvider);
 
-void _redirectFromState(AppAuthState auth) {
-  if (!mounted) return;
-  if (auth is AuthAuthenticated) {
-    auth.user.needsRole
-        ? context.go(Routes.roleSelect)
-        : context.go(Routes.discovery);
-  } else {
-    context.go(Routes.phoneAuth);
+    // If still loading and not forced, wait for next state change
+    if ((auth is AuthInitial || auth is AuthLoading) && !forceNavigate) {
+      ref.listenManual(authProvider, (previous, next) {
+        // Stop listening once we get a non-loading state
+        if (next is AuthInitial || next is AuthLoading) return;
+        if (!mounted) return;
+        _redirectFromState(next);
+      });
+      return;
+    }
+
+    // If forced navigation or resolved state, navigate now
+    if (!mounted) return;
+    _redirectFromState(auth);
   }
-}
+
+  void _redirectFromState(AppAuthState auth) {
+    if (!mounted) return;
+
+    if (auth is AuthAuthenticated) {
+      auth.user.needsRole
+          ? context.go(Routes.roleSelect)
+          : context.go(Routes.discovery);
+    } else if (auth is AuthUnauthenticated) {
+      context.go(Routes.phoneAuth);
+    } else {
+      // Still in loading/error state after timeout, go to phone auth as fallback
+      context.go(Routes.phoneAuth);
+    }
+  }
+
   @override
   void dispose() {
     _controller.dispose();
@@ -87,10 +103,10 @@ void _redirectFromState(AppAuthState auth) {
   }
 
   // ── Brand colours ──────────────────────────────────────────────────────────
-  static const Color _bgCenter   = Color(0xFF0A5C38); // mid-green
-  static const Color _bgEdge     = Color(0xFF052E1C); // deep forest
-  static const Color _gold       = Color(0xFFCB9A2E); // amber/gold accent
-  static const Color _logoWhite  = Color(0xFFF5F5F5);
+  static const Color _bgCenter = Color(0xFF0A5C38); // mid-green
+  static const Color _bgEdge = Color(0xFF052E1C); // deep forest
+  static const Color _gold = Color(0xFFCB9A2E); // amber/gold accent
+  static const Color _logoWhite = Color(0xFFF5F5F5);
 
   @override
   Widget build(BuildContext context) {
@@ -141,7 +157,7 @@ void _redirectFromState(AppAuthState auth) {
                     Text(
                       'Hustle',
                       style: TextStyle(
-                        fontFamily: 'Poppins',          // swap to your font
+                        fontFamily: 'Poppins', // swap to your font
                         fontSize: 38,
                         fontWeight: FontWeight.w800,
                         color: _logoWhite,
@@ -274,39 +290,21 @@ class _LockPersonPainter extends CustomPainter {
     );
     canvas.drawRRect(bodyRRect, paint);
 
-    // Lock shackle (arc on top of body rectangle)
-    final shacklePaint = Paint()
-      ..color = color
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.085
-      ..strokeCap = StrokeCap.round;
-
-    final shackleRect = Rect.fromCenter(
-      center: Offset(w * 0.5, h * 0.63),
-      width: w * 0.32,
-      height: h * 0.28,
-    );
-    canvas.drawArc(shackleRect, 3.14, 3.14, false, shacklePaint);
-
-    // Lock body (rounded rect at bottom)
-    final lockBodyRRect = RRect.fromRectAndRadius(
+    // Lock body (rounded rect)
+    final lockRRect = RRect.fromRectAndRadius(
       Rect.fromCenter(
-        center: Offset(w * 0.5, h * 0.795),
-        width: w * 0.44,
+        center: Offset(w * 0.5, h * 0.72),
+        width: w * 0.24,
         height: h * 0.24,
       ),
-      Radius.circular(w * 0.07),
+      Radius.circular(w * 0.06),
     );
-    canvas.drawRRect(lockBodyRRect, paint);
+    canvas.drawRRect(lockRRect, paint);
 
-    // Keyhole dot
-    canvas.drawCircle(
-      Offset(w * 0.5, h * 0.785),
-      w * 0.055,
-      Paint()..color = Colors.white,
-    );
+    // Lock keyhole (small circle)
+    canvas.drawCircle(Offset(w * 0.5, h * 0.72), w * 0.05, paint);
   }
 
   @override
-  bool shouldRepaint(_LockPersonPainter old) => old.color != color;
+  bool shouldRepaint(_LockPersonPainter oldDelegate) => false;
 }

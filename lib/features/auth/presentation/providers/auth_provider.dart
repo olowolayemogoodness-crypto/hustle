@@ -3,6 +3,7 @@ import 'package:hustle/features/auth/data/models/auth_repository.dart';
 import 'package:supabase_flutter/supabase_flutter.dart'
     hide AuthUser;
 import 'package:hustle/features/auth/data/models/auth_models.dart';
+import 'dart:async';
 
 
 sealed class AppAuthState { const AppAuthState(); }
@@ -19,12 +20,27 @@ class AuthError           extends AppAuthState {
 }
 
 class AuthNotifier extends Notifier<AppAuthState> {
+  late StreamSubscription _subscription;
+
   @override
   AppAuthState build() {
+    // Start listening to auth changes immediately
     _subscribeToSupabase();
+    
+    // Register cleanup
+    ref.onDispose(() {
+      _subscription.cancel();
+    });
+    
+    // Check for existing session synchronously
     final session = AuthRepository.currentSession;
-    if (session == null) return const AuthUnauthenticated();
-    return AuthAuthenticated(AuthUser.fromSupabase(session.user));
+    if (session != null) {
+      return AuthAuthenticated(AuthUser.fromSupabase(session.user));
+    }
+    
+    // If no session yet, stay in AuthLoading to allow stream to resolve
+    // The stream will emit initialSession event and update state
+    return const AuthLoading();
   }
 
   void checkSession() {
@@ -37,7 +53,7 @@ class AuthNotifier extends Notifier<AppAuthState> {
   }
 
   void _subscribeToSupabase() {
-    AuthRepository.authStateChanges.listen((supabaseState) {
+    _subscription = AuthRepository.authStateChanges.listen((supabaseState) {
       switch (supabaseState.event) {
         case AuthChangeEvent.signedIn:
         case AuthChangeEvent.tokenRefreshed:
@@ -46,6 +62,9 @@ class AuthNotifier extends Notifier<AppAuthState> {
           final user = supabaseState.session?.user;
           if (user != null) {
             state = AuthAuthenticated(AuthUser.fromSupabase(user));
+          } else if (supabaseState.event == AuthChangeEvent.initialSession) {
+            // initialSession with no user means user is not logged in
+            state = const AuthUnauthenticated();
           }
         case AuthChangeEvent.signedOut:
           state = const AuthUnauthenticated();
