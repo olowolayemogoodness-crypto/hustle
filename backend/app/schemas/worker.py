@@ -20,6 +20,12 @@ class WorkerBase(BaseModel):
     longitude: float
     availability: float = Field(..., ge=0, le=1)
 
+    # Optional profile health fields for cold start and feedback
+    bio: Optional[str] = None
+    experience_level: Optional[str] = None
+    recent_activity_days: Optional[int] = None
+    completed_jobs: Optional[int] = None
+
 
 class WorkerResponse(WorkerBase):
     trust_score: Optional[float] = None
