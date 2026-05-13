@@ -7,8 +7,10 @@ class Routes {
   static const String workerSetup  = '/auth/setup';   // ← add this
   static const String kyc          = '/auth/kyc';
   static const String discovery    = '/discovery';
-  static const String mapView      = '/discovery/map';
   static const String wallet       = '/wallet';
   static const String profile      = '/profile';
   static const String jobDetail    = '/job/:id';
+  static const String mapView = '/map'; // ← no longer /discovery/map
 }
+
+

@@ -171,6 +171,70 @@ class _AvatarWithBadge extends StatelessWidget {
   }
 }
 
+// In job posting screen — show employer what they'll pay
+class _FeeBreakdown extends StatelessWidget {
+  const _FeeBreakdown({required this.jobValueKobo});
+  final int jobValueKobo;
+
+  int get platformFee  => (jobValueKobo * 2 / 100).round();
+  int get totalCharge  => jobValueKobo + platformFee;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.primaryGreenLight,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.primaryGreen.withOpacity(0.3)),
+      ),
+      child: Column(
+        children: [
+          _Row('Job value',    Formatters.naira(jobValueKobo),
+              color: AppColors.textPrimary),
+          const SizedBox(height: 8),
+          _Row('Platform fee (2%)', Formatters.naira(platformFee),
+              color: AppColors.textSecondary),
+          const Divider(height: 20),
+          _Row('You pay',     Formatters.naira(totalCharge),
+              color: AppColors.primaryGreen, bold: true),
+          const SizedBox(height: 4),
+          _Row('Worker gets', Formatters.naira(jobValueKobo),
+              color: AppColors.primaryGreen, bold: true),
+        ],
+      ),
+    );
+  }
+}
+
+class _Row extends StatelessWidget {
+  const _Row(this.label, this.value, {
+    required this.color,
+    this.bold = false,
+  });
+
+  final String label, value;
+  final Color  color;
+  final bool   bold;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = TextStyle(
+      fontFamily: 'DMSans',
+      fontSize:   bold ? 15 : 13.5,
+      fontWeight: bold ? FontWeight.w700 : FontWeight.w400,
+      color:      color,
+    );
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label, style: style),
+        Text(value,  style: style),
+      ],
+    );
+  }
+}
+
 // ─────────────────────────── Trust Score Banner ────────────────────────────
 
 class _TrustScoreBanner extends StatelessWidget {

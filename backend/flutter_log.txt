@@ -1,0 +1,19 @@
+Changing current working directory to: /Users/mac/hustle
+Launching lib/main.dart on iPhone 16e in debug mode...
+Running Xcode build...                                          
+Xcode build done.                                           17.3s
+Target native_assets required define SdkRoot but it was not provided
+Syncing files to device iPhone 16e...                              201ms
+
+Flutter run key commands.
+r Hot reload. 🔥🔥🔥
+R Hot restart.
+h List all available interactive commands.
+d Detach (terminate "flutter run" but leave application running).
+c Clear the screen
+q Quit (terminate the application on the device).
+
+A Dart VM Service on iPhone 16e is available at: http://127.0.0.1:60398/vi6eZq4pSWE=/
+The Flutter DevTools debugger and profiler on iPhone 16e is available at: http://127.0.0.1:60398/vi6eZq4pSWE=/devtools/?uri=ws://127.0.0.1:60398/vi6eZq4pSWE=/ws
+flutter: supabase.supabase_flutter: INFO: ***** Supabase init completed *****
+Lost connection to device.

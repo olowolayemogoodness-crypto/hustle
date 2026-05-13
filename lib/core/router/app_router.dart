@@ -14,15 +14,17 @@ import '../../features/auth/presentation/providers/auth_provider.dart';
 import 'routes.dart';
 
 const _navRoutes = [
-  Routes.discovery,
-  Routes.mapView,
-  Routes.wallet,
-  Routes.profile,
+  Routes.discovery, // index 0 — Jobs
+  Routes.mapView,   // index 1 — Discover
+  Routes.wallet,    // index 2 — Wallet
+  Routes.profile,   // index 3 — Profile
 ];
 
 int _navIndex(String location) {
-  final i = _navRoutes.indexWhere((r) => location.startsWith(r));
-  return i < 0 ? 0 : i;
+  if (location == Routes.mapView)   return 1;
+  if (location == Routes.wallet)    return 2;
+  if (location == Routes.profile)   return 3;
+  return 0; // discovery is default
 }
 
 final appRouterProvider = Provider<GoRouter>((ref) {
@@ -39,30 +41,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final auth     = notifier.value;
       final location = state.matchedLocation;
 
-      // Still initialising → stay on splash
-      if (auth is AuthInitial || auth is AuthLoading) {
-        return Routes.splash;
-      }
+      if (auth is AuthInitial || auth is AuthLoading) return Routes.splash;
 
-      // Not logged in → login
       if (auth is AuthUnauthenticated) {
         if (location == Routes.phoneAuth ||
             location == Routes.splash) return null;
         return Routes.phoneAuth;
       }
 
-      // Logged in
       if (auth is AuthAuthenticated) {
         final user = auth.user;
 
-        // Coming from splash/login → route to right place
         if (location == Routes.splash ||
             location == Routes.phoneAuth) {
           if (user.needsRole) return Routes.roleSelect;
           return Routes.discovery;
         }
 
-        // Has role step pending
         if (user.needsRole &&
             location != Routes.roleSelect &&
             location != Routes.workerSetup) {
@@ -74,24 +69,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     },
     routes: [
       // ── Fullscreen — no bottom nav ──────────────────────────────
-      GoRoute(
-        path: Routes.splash,
-        builder: (_, __) => const SplashScreen(),
-      ),
-      GoRoute(
-        path: Routes.phoneAuth,
-        builder: (_, __) => const PhoneAuthScreen(),
-      ),
-      GoRoute(
-        path: Routes.roleSelect,
-        builder: (_, __) => const RoleSelectScreen(),
-      ),
-      GoRoute(
-        path: Routes.workerSetup,
-        builder: (_, __) => const WorkerSetupScreen(),
-      ),
+      GoRoute(path: Routes.splash,      builder: (_, __) => const SplashScreen()),
+      GoRoute(path: Routes.phoneAuth,   builder: (_, __) => const PhoneAuthScreen()),
+      GoRoute(path: Routes.roleSelect,  builder: (_, __) => const RoleSelectScreen()),
+      GoRoute(path: Routes.workerSetup, builder: (_, __) => const WorkerSetupScreen()),
 
-      // ── Shell — bottom nav visible on all 4 tabs ────────────────
+      // ── Shell — bottom nav visible ──────────────────────────────
       ShellRoute(
         builder: (context, state, child) => Scaffold(
           body: child,
@@ -101,22 +84,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ),
         routes: [
-          GoRoute(
-            path: Routes.discovery,
-            builder: (_, __) => const DiscoveryScreen(),
-          ),
-          GoRoute(
-            path: Routes.mapView,
-            builder: (_, __) => const MapViewScreen(),
-          ),
-          GoRoute(
-            path: Routes.wallet,
-            builder: (_, __) => const WalletScreen(),
-          ),
-          GoRoute(
-            path: Routes.profile,
-            builder: (_, __) => const WorkerProfileScreen(),
-          ),
+          GoRoute(path: Routes.discovery, builder: (_, __) => const DiscoveryScreen()),
+          GoRoute(path: Routes.mapView,   builder: (_, __) => const MapViewScreen()),
+          GoRoute(path: Routes.wallet,    builder: (_, __) => const WalletScreen()),
+          GoRoute(path: Routes.profile,   builder: (_, __) => const WorkerProfileScreen()),
         ],
       ),
     ],

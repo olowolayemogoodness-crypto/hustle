@@ -81,6 +81,50 @@ class WalletState {
   final WorkerStats stats;
   final List<MonthlyEarning> monthlyEarnings;
   final List<WalletTransaction> transactions;
+   
+
+
+ // ── Add this ──────────────────────────────────────────────────────
+  factory WalletState.fromJson({
+    required Map<String, dynamic> balance,
+    required List<dynamic>        transactions,
+  }) {
+    return WalletState(
+      balance: WalletBalance(
+        available:    balance['available_kobo']  as int? ?? 0,
+        locked:       balance['locked_kobo']     as int? ?? 0,
+        totalEarned:  balance['total_earned']    as int? ?? 0,
+        thisMonth:    balance['this_month']      as int? ?? 0,
+      ),
+      stats: WorkerStats(
+        jobsDone:   balance['total_jobs']   as int?    ?? 0,
+        avgPerJob:  balance['avg_per_job']  as int?    ?? 0,
+        rating:     (balance['avg_rating']  as num?)?.toDouble() ?? 0.0,
+      ),
+      monthlyEarnings: const [],  // fetch separately if needed
+      transactions: transactions.map((t) {
+        final tx = t as Map<String, dynamic>;
+        return WalletTransaction(
+          id:       tx['id']          as String,
+          title:    tx['description'] as String? ?? '',
+          subtitle: tx['type']        as String? ?? '',
+          date:     DateTime.parse(tx['created_at'] as String),
+          amount:   tx['amount_kobo'] as int,
+          type:     _parseType(tx['type'] as String? ?? ''),
+          status:   TransactionStatus.completed,
+        );
+      }).toList(),
+    );
+  }
+    static TransactionType _parseType(String type) {
+    switch (type) {
+      case 'withdrawal':   return TransactionType.withdrawal;
+      case 'escrow_lock':  return TransactionType.escrowLock;
+      case 'topup':        return TransactionType.credit;
+      default:             return TransactionType.credit;
+    }
+  }
+
 
   factory WalletState.mock() => WalletState(
         balance: WalletBalance.mock(),
