@@ -9,6 +9,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.api.health import router as health_router
 from app.api.match import router as match_router
 from app.api.predict import router as predict_router
+from app.api.feedback import router as feedback_router
+from app.api.analytics import router as analytics_router
 from app.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import request_timing_middleware
@@ -35,6 +37,8 @@ app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=li
 app.include_router(health_router)
 app.include_router(predict_router)
 app.include_router(match_router)
+app.include_router(feedback_router)
+app.include_router(analytics_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,
@@ -69,7 +73,7 @@ async def http_exception_handler(request: Request, exc: StarletteHTTPException):
 
 @app.exception_handler(Exception)
 async def internal_exception_handler(request: Request, exc: Exception):
-    logger.exception("Unhandled exception on %s %s", request.method, request.url.path, exc)
+    logger.exception("Unhandled exception on %s %s", request.method, request.url.path)
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "An internal server error occurred."},

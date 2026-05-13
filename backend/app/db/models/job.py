@@ -1,10 +1,12 @@
 import uuid
 
-from sqlalchemy import String, Float, Integer, DateTime, Text, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
+from sqlalchemy import String, Float, Integer, DateTime, Text, JSON, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
+from app.db.types import GUID
+
+from app.config import settings
 from app.db.models.base import Base
 
 
@@ -12,13 +14,13 @@ class Job(Base):
     __tablename__ = "jobs"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         primary_key=True,
         default=uuid.uuid4,
     )
 
     employer_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         nullable=False,
     )
@@ -34,7 +36,7 @@ class Job(Base):
     )
 
     required_skills: Mapped[list[str]] = mapped_column(
-        ARRAY(String),
+        JSON,
         default=list,
     )
 

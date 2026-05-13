@@ -10,12 +10,15 @@ from sqlalchemy import (
     ForeignKey,
     DateTime,
     Text,
+    JSON,
 )
 
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 
+from app.db.types import GUID
+
+from app.config import settings
 from app.db.models.base import Base
 
 
@@ -23,20 +26,20 @@ class WorkerProfile(Base):
     __tablename__ = "worker_profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         primary_key=True,
         default=uuid.uuid4,
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         unique=True,
         nullable=False,
     )
 
     skills: Mapped[list[str]] = mapped_column(
-        ARRAY(String),
+        JSON,
         default=list,
     )
 
@@ -111,6 +114,15 @@ class WorkerProfile(Base):
         DateTime(timezone=True),
         server_default=func.now(),
         onupdate=func.now(),
+    )
+
+    LocationType = Geography(geometry_type="POINT", srid=4326)
+    if settings.database_url.startswith("sqlite"):
+        LocationType = String(255)
+
+    last_location = mapped_column(
+        LocationType,
+        nullable=True,
     )
 
     user = relationship(

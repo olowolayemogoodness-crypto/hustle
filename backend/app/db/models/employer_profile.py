@@ -1,9 +1,10 @@
 import uuid
 
 from sqlalchemy import String, Integer, Float, Boolean, ForeignKey, DateTime, Text
-from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+
+from app.db.types import GUID
 
 from app.db.models.base import Base
 
@@ -12,13 +13,13 @@ class EmployerProfile(Base):
     __tablename__ = "employer_profiles"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         primary_key=True,
         default=uuid.uuid4,
     )
 
     user_id: Mapped[uuid.UUID] = mapped_column(
-        UUID(as_uuid=True),
+        GUID(),
         ForeignKey("users.id", ondelete="CASCADE"),
         unique=True,
         nullable=False,

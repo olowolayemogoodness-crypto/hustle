@@ -1,0 +1,100 @@
+import uuid
+
+from sqlalchemy import Boolean, Float, DateTime, ForeignKey, String
+from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql import func
+
+from app.db.types import GUID
+
+from app.db.models.base import Base
+
+
+class MatchLog(Base):
+    __tablename__ = "match_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        GUID(),
+        primary_key=True,
+        default=uuid.uuid4,
+    )
+
+    job_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(),
+        ForeignKey("jobs.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    worker_id: Mapped[uuid.UUID] = mapped_column(
+        GUID(),
+        ForeignKey("worker_profiles.user_id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+
+    final_score: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+
+    rule_score: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+
+    ml_probability: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+
+    risk_penalty: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+
+    confidence: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+
+    status: Mapped[str] = mapped_column(
+        String(20),
+        default="ranked",
+    )
+
+    accepted: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+    )
+
+    completed: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+    )
+
+    dispute_occurred: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+    )
+
+    employer_rating: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    worker_rating: Mapped[float | None] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    created_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+    )
+
+    updated_at: Mapped[DateTime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+

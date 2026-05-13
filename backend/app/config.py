@@ -141,6 +141,12 @@ class Settings(BaseSettings):
         le=1,
     )
 
+    max_worker_search_radius: float = Field(
+        default=20.0,
+        ge=1.0,
+        le=100.0,
+    )
+
     max_workers_evaluated: int = Field(
         default=50,
         ge=1,

@@ -1,5 +1,6 @@
 from sqlalchemy import text
 
+import app.db.models  # noqa: F401  # ensure model classes are registered with Base.metadata
 from app.db.models.base import Base
 from app.db.session import engine
 
