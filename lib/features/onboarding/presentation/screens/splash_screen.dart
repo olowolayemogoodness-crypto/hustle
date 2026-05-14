@@ -28,9 +28,14 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
     // Add this temporarily anywhere in your Flutter app
 // e.g. in splash screen initState just to grab the token
 
-final session = Supabase.instance.client.auth.currentSession;
-final token = session?.accessToken ?? '';
-print('TOKEN_START${token}TOKEN_END');
+// Add temporarily in splash screen or anywhere after login
+// In Flutter, add this temporarily after login
+// In Flutter — add this after login
+
+
+
+
+
     _controller = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1100),

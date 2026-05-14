@@ -93,7 +93,7 @@ class _MapViewScreenState extends ConsumerState<MapViewScreen>
             top: MediaQuery.of(context).padding.top + 8,
             left: 16,
             right: 16,
-            child: _MapSearchBar(),
+            child:  _MapSearchBar(mapController: _mapController),
           ),
 
           // ── 4. Recenter FAB ──
@@ -111,14 +111,22 @@ class _MapViewScreenState extends ConsumerState<MapViewScreen>
           ),
 
           // ── 5. Draggable bottom sheet with job cards ──
-          jobsAsync.when(
-            loading: () => _NearbyJobsSheet(jobs: [], selectedId: null),
-            error: (_, __) => _NearbyJobsSheet(jobs: [], selectedId: null),
-            data: (jobs) => _NearbyJobsSheet(
-              jobs: jobs,
-              selectedId: mapState.selectedJobId,
-            ),
-          ),
+        // ── 5. Draggable bottom sheet with job cards ──
+Positioned.fill(
+  child: Padding(
+    padding: EdgeInsets.only(
+      bottom: MediaQuery.of(context).viewInsets.bottom, // ← shrinks when keyboard opens
+    ),
+    child: jobsAsync.when(
+      loading: () => _NearbyJobsSheet(jobs: [], selectedId: null),
+      error: (_, __) => _NearbyJobsSheet(jobs: [], selectedId: null),
+      data: (jobs) => _NearbyJobsSheet(
+        jobs: jobs,
+        selectedId: mapState.selectedJobId,
+      ),
+    ),
+  ),
+),
 
           // ── 6. Bottom nav ──
 
@@ -243,11 +251,14 @@ class _TopSafeArea extends StatelessWidget {
 // ─────────────────────────── Map Search Bar ────────────────────────────
 
 class _MapSearchBar extends ConsumerStatefulWidget {
+  const _MapSearchBar({required this.mapController}); // ← add
+  final MapController mapController;  
   @override
   ConsumerState<_MapSearchBar> createState() => _MapSearchBarState();
 }
 
 class _MapSearchBarState extends ConsumerState<_MapSearchBar> {
+         
   final _controller = TextEditingController();
   List<NominatimResult> _results = [];
   bool _searching = false;
@@ -380,11 +391,15 @@ class _MapSearchBarState extends ConsumerState<_MapSearchBar> {
                   overflow: TextOverflow.ellipsis,
                 ),
                 onTap: () {
-                  _controller.clear();
-                  setState(() => _results = []);
-                  // Move map to selected location
-                  ref.read(mapProvider.notifier)
-                      .updateCameraPosition(r.latLng);
+                 
+  _controller.clear();
+  setState(() => _results = []);
+  FocusScope.of(context).unfocus(); // ← dismiss keyboard
+
+  // Animate to location exactly like recenter button
+  widget.mapController.move(r.latLng, 15.0); // ← zooms to point
+  ref.read(mapProvider.notifier).updateCameraPosition(r.latLng);
+
                 },
               )).toList(),
             ),
@@ -671,24 +686,48 @@ class _RecenterButton extends StatelessWidget {
 }
 
 // ─────────────────────────── Nearby Jobs Bottom Sheet ────────────────────────────
-
-class _NearbyJobsSheet extends StatelessWidget {
-  const _NearbyJobsSheet({
-    required this.jobs,
-    required this.selectedId,
-  });
-
+class _NearbyJobsSheet extends StatefulWidget {
+  const _NearbyJobsSheet({required this.jobs, required this.selectedId});
   final List<JobListing> jobs;
   final String? selectedId;
 
   @override
+  State<_NearbyJobsSheet> createState() => _NearbyJobsSheetState();
+}
+
+class _NearbyJobsSheetState extends State<_NearbyJobsSheet> {
+  final _sheetController = DraggableScrollableController();
+
+  @override
+  void dispose() {
+    _sheetController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final keyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+
+    // Collapse sheet when keyboard opens
+    if (keyboardOpen) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_sheetController.isAttached) {
+          _sheetController.animateTo(
+            0.0,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
+
     return DraggableScrollableSheet(
-      initialChildSize: 0.30,
-   minChildSize: 0.25,
+      controller: _sheetController,
+      initialChildSize: keyboardOpen ? 0.0 : 0.30,
+      minChildSize: 0.0,           // ← allows full collapse
       maxChildSize: 0.55,
       snap: true,
-      snapSizes: const [0.25, 0.30, 0.55],
+      snapSizes: const [0.0, 0.25, 0.30, 0.55],
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(
@@ -722,8 +761,7 @@ class _NearbyJobsSheet extends StatelessWidget {
                 child: Row(
                   children: [
                     Container(
-                      width: 8,
-                      height: 8,
+                      width: 8, height: 8,
                       decoration: const BoxDecoration(
                         color: AppColors.success,
                         shape: BoxShape.circle,
@@ -731,7 +769,7 @@ class _NearbyJobsSheet extends StatelessWidget {
                     ),
                     const SizedBox(width: 8),
                     Text(
-                      '${jobs.length} Jobs Near You',
+                      '${widget.jobs.length} Jobs Near You',
                       style: const TextStyle(
                         fontFamily: 'DMSans',
                         fontSize: 15,
@@ -748,14 +786,12 @@ class _NearbyJobsSheet extends StatelessWidget {
                   controller: scrollController,
                   scrollDirection: Axis.horizontal,
                   padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  itemCount: jobs.length,
+                  itemCount: widget.jobs.length,
                   separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (context, i) {
-                    return _MapJobCard(
-                      job: jobs[i],
-                      isSelected: jobs[i].id == selectedId,
-                    );
-                  },
+                  itemBuilder: (context, i) => _MapJobCard(
+                    job: widget.jobs[i],
+                    isSelected: widget.jobs[i].id == widget.selectedId,
+                  ),
                 ),
               ),
             ],
@@ -765,6 +801,7 @@ class _NearbyJobsSheet extends StatelessWidget {
     );
   }
 }
+
 
 class _MapJobCard extends ConsumerWidget {
   const _MapJobCard({required this.job, required this.isSelected});

@@ -1,48 +1,34 @@
-from datetime import datetime, timedelta, timezone
-from typing import Any
+from functools import lru_cache
 import jwt
+from jwt import PyJWKClient
 from fastapi import HTTPException, status
 from app.core.config import settings
-from jwt import PyJWKClient
-ALGORITHM = "HS256"
 
 
-def create_access_token(payload: dict[str, Any]) -> str:
-    """
-    Create a signed JWT.
-    payload must include 'sub' (user UUID) and 'phone'.
-    """
-    expire = datetime.now(timezone.utc) + timedelta(
-        minutes=settings.jwt_expire_minutes
-    )
-    data = {
-        **payload,
-        "exp": expire,
-        "iat": datetime.now(timezone.utc),
-    }
-    return jwt.encode(data, settings.jwt_secret, algorithm=ALGORITHM)
-
-
-_jwks_client = PyJWKClient(f"{settings.supabase_url}/auth/v1/.well-known/jwks.json")
+@lru_cache(maxsize=1)
+def _get_jwks_client() -> PyJWKClient:
+    url = f"{settings.supabase_url}/auth/v1/.well-known/jwks.json"
+    print(f"JWKS URL: {url}")  # debug
+    return PyJWKClient(url, cache_keys=True)
 
 
 def decode_access_token(token: str) -> dict:
     try:
-        signing_key = _jwks_client.get_signing_key_from_jwt(token)
-        payload = jwt.decode(
+        client = _get_jwks_client()
+        signing_key = client.get_signing_key_from_jwt(token)
+
+        unverified = jwt.decode(token, options={"verify_signature": False})
+        print("Unverified payload:", unverified)
+        print("Signing key:", signing_key.key)
+
+        return jwt.decode(
             token,
             signing_key.key,
             algorithms=["ES256"],
             audience="authenticated",
         )
-        return payload
     except jwt.ExpiredSignatureError:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token has expired",
-        )
+        raise HTTPException(status_code=401, detail="Token has expired")
     except jwt.InvalidTokenError as e:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid token",
-        )
+        print("JWT error:", e)
+        raise HTTPException(status_code=401, detail=f"Invalid token: {e}")

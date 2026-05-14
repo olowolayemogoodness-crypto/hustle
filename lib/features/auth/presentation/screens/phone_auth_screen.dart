@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hustle/core/supabase/supabase_config.dart';
 import '../../../../core/config/theme.dart';
 import '../providers/auth_provider.dart';
 
@@ -14,16 +17,28 @@ class _PhoneAuthScreenState extends ConsumerState<PhoneAuthScreen> {
   bool _loading = false;
   String? _error;
 
-  Future<void> _signInWithGoogle() async {
-    setState(() { _loading = true; _error = null; });
-    final ok = await ref.read(authProvider.notifier).signInWithGoogle();
-    if (!ok && mounted) {
-      setState(() {
-        _loading = false;
-        _error = (ref.read(authProvider) as AuthError?)?.message;
-      });
-    }
+ Future<void> _signInWithGoogle() async {
+  setState(() {
+    _loading = true;
+    _error = null;
+  });
+
+  final ok = await ref.read(authProvider.notifier).signInWithGoogle();
+
+  if (!ok && mounted) {
+    setState(() {
+      _loading = false;
+      _error = (ref.read(authProvider) as AuthError?)?.message;
+    });
   }
+
+  if (ok) {
+    final session = SupabaseConfig.auth.currentSession;
+    final token = session?.accessToken;
+
+    print('Token available: ${token != null}');
+  }
+}
 
   @override
   Widget build(BuildContext context) {

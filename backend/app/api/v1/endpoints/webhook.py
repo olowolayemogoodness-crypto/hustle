@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db.session import get_db
 from app.services.squad_service import SquadService
 from app.services.escrow_service import EscrowService
-from app.supabase.client import supabase
+from app.core.config import settings
 import logging
 
 router = APIRouter(prefix="/webhook", tags=["webhook"])
@@ -56,7 +56,7 @@ async def squad_webhook(
     user_id = result.data["id"]
 
     # 4. Credit employer wallet (idempotent)
-    async with get_db() as db:
+    async for db in get_db():
         await EscrowService.credit_employer_wallet(
             db          = db,
             user_id     = user_id,

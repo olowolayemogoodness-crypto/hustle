@@ -1,6 +1,7 @@
 class Routes {
   Routes._();
   static const String splash       = '/';
+  static const String onboarding   = '/onboarding';
   static const String phoneAuth    = '/auth/phone';
 
   static const String roleSelect   = '/auth/role';

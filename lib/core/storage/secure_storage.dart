@@ -3,16 +3,20 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class SecureStorage {
   SecureStorage._();
 
+
+  
+
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
     iOptions: IOSOptions(accessibility: KeychainAccessibility.first_unlock),
   );
 
-  static const _kToken    = 'locgig_access_token';
-  static const _kUserId   = 'locgig_user_id';
-  static const _kPhone    = 'locgig_phone';
-  static const _kRole     = 'locgig_role';
-  static const _kKycStatus = 'locgig_kyc_status';
+  static const _kToken         = 'locgig_access_token';
+  static const _kUserId        = 'locgig_user_id';
+  static const _kPhone         = 'locgig_phone';
+  static const _kRole          = 'locgig_role';
+  static const _kKycStatus     = 'locgig_kyc_status';
+  static const _kSeenOnboarding = 'locgig_seen_onboarding';
 
   static Future<void> saveSession({
     required String token,
@@ -30,11 +34,17 @@ class SecureStorage {
     ]);
   }
 
-  static Future<String?> getToken()    => _storage.read(key: _kToken);
-  static Future<String?> getUserId()   => _storage.read(key: _kUserId);
-  static Future<String?> getPhone()    => _storage.read(key: _kPhone);
-  static Future<String?> getRole()     => _storage.read(key: _kRole);
-  static Future<String?> getKycStatus()=> _storage.read(key: _kKycStatus);
+  static Future<String?> getToken()        => _storage.read(key: _kToken);
+  static Future<String?> getUserId()       => _storage.read(key: _kUserId);
+  static Future<String?> getPhone()        => _storage.read(key: _kPhone);
+  static Future<String?> getRole()         => _storage.read(key: _kRole);
+  static Future<String?> getKycStatus()    => _storage.read(key: _kKycStatus);
+  static Future<bool> hasSeenOnboarding() async {
+    final val = await _storage.read(key: _kSeenOnboarding);
+    return val == 'true';
+  }
+  static Future<void> markOnboardingSeen() =>
+      _storage.write(key: _kSeenOnboarding, value: 'true');
 
   static Future<bool> hasSession() async {
     final token = await getToken();
@@ -54,6 +64,7 @@ class SecureStorage {
       _storage.delete(key: _kPhone),
       _storage.delete(key: _kRole),
       _storage.delete(key: _kKycStatus),
+      _storage.delete(key: _kSeenOnboarding),
     ]);
   }
 }

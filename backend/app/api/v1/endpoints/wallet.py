@@ -5,10 +5,7 @@ from pydantic import BaseModel
 from app.db.session import get_db
 from app.dependencies import get_current_user
 from app.models.user import User
-from app.models import (
-    EmployerWallet, WorkerWallet,
-    WalletTransaction, Withdrawal,
-)
+from app.db.models.wallet import (EmployerWallet, WorkerWallet, WalletTransaction, Withdrawal)
 from app.services.squad_service import SquadService
 from app.services.escrow_service import EscrowService
 
