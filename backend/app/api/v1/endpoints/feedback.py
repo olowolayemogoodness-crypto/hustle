@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.core.config import settings
 from app.core.logging import get_logger
 from app.db.deps import get_db
 from app.schemas.feedback import FeedbackRequest, FeedbackResponse

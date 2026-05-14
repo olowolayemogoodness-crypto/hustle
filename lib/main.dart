@@ -11,6 +11,7 @@ void main() async {
   
   await dotenv.load(fileName: '.env');
 
+
   // Hive init — used for tile cache + app storage
   await Hive.initFlutter();
 

@@ -2,8 +2,8 @@ from datetime import datetime, timedelta, timezone
 from typing import Any
 import jwt
 from fastapi import HTTPException, status
-from app.config import settings
-
+from app.core.config import settings
+from jwt import PyJWKClient
 ALGORITHM = "HS256"
 
 
@@ -23,25 +23,26 @@ def create_access_token(payload: dict[str, Any]) -> str:
     return jwt.encode(data, settings.jwt_secret, algorithm=ALGORITHM)
 
 
-def decode_access_token(token: str) -> dict[str, Any]:
-    """
-    Decode and verify JWT. Raises 401 on any failure.
-    """
+_jwks_client = PyJWKClient(f"{settings.supabase_url}/auth/v1/.well-known/jwks.json")
+
+
+def decode_access_token(token: str) -> dict:
     try:
-        return jwt.decode(
+        signing_key = _jwks_client.get_signing_key_from_jwt(token)
+        payload = jwt.decode(
             token,
-            settings.jwt_secret,
-            algorithms=[ALGORITHM],
+            signing_key.key,
+            algorithms=["ES256"],
+            audience="authenticated",
         )
+        return payload
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Token expired",
-            headers={"WWW-Authenticate": "Bearer"},
+            detail="Token has expired",
         )
-    except jwt.InvalidTokenError:
+    except jwt.InvalidTokenError as e:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token",
-            headers={"WWW-Authenticate": "Bearer"},
         )

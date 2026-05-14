@@ -172,7 +172,7 @@ class _MapViewScreenState extends ConsumerState<MapViewScreen>
             return Marker(
               point: LatLng(job.latitude, job.longitude),
               width: isSelected ? 170 : 90,
-              height: isSelected ? 58 : 36,
+              height: isSelected ? 74 : 36,
               alignment: Alignment.bottomCenter,
               child: GestureDetector(
                 onTap: () {
@@ -469,7 +469,7 @@ class _SelectedPin extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: 170,
-      height: 58,
+      height: 74,
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

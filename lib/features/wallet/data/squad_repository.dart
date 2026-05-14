@@ -4,7 +4,43 @@ import 'package:hustle/core/network/dio_client.dart';
 class SquadRepository {
   final Dio _dio = DioClient.instance;
 
-  // ── Account Lookup ───────────────────────────────────────────────
+  // ── Initiate Dynamic VA top-up ───────────────────────────────────
+  Future<Map<String, dynamic>> initiateTopUp({
+    required int amountKobo,
+    required int duration,
+  }) async {
+    final response = await _dio.post(
+      '/wallet/topup/initiate',
+      data: {
+        'amount_kobo': amountKobo,
+        'duration':    duration,
+      },
+    );
+    return response.data as Map<String, dynamic>;
+  }
+
+  // ── Poll payment status ──────────────────────────────────────────
+  Future<Map<String, dynamic>> checkTopUpStatus(String reference) async {
+    final response = await _dio.get('/wallet/topup/status/$reference');
+    return response.data as Map<String, dynamic>;
+  }
+
+  // ── Wallet balance ───────────────────────────────────────────────
+  Future<Map<String, dynamic>> getWalletBalance() async {
+    final response = await _dio.get('/wallet/balance');
+    return response.data as Map<String, dynamic>;
+  }
+
+  // ── Transaction history ──────────────────────────────────────────
+  Future<List<dynamic>> getTransactions({int limit = 20}) async {
+    final response = await _dio.get(
+      '/wallet/transactions',
+      queryParameters: {'limit': limit},
+    );
+    return response.data['data'] as List<dynamic>;
+  }
+
+  // ── Account lookup ───────────────────────────────────────────────
   Future<Map<String, dynamic>> lookupAccount({
     required String bankCode,
     required String accountNumber,
@@ -19,7 +55,7 @@ class SquadRepository {
     return response.data as Map<String, dynamic>;
   }
 
-  // ── Initiate Withdrawal ──────────────────────────────────────────
+  // ── Worker withdrawal ────────────────────────────────────────────
   Future<Map<String, dynamic>> initiateWithdrawal({
     required int    amountKobo,
     required String bankCode,
@@ -29,38 +65,17 @@ class SquadRepository {
     final response = await _dio.post(
       '/wallet/withdraw',
       data: {
-        'amount_kobo':     amountKobo,
-        'bank_code':       bankCode,
-        'account_number':  accountNumber,
-        'account_name':    accountName,
+        'amount_kobo':    amountKobo,
+        'bank_code':      bankCode,
+        'account_number': accountNumber,
+        'account_name':   accountName,
       },
     );
     return response.data as Map<String, dynamic>;
   }
 
-  // ── Get Wallet Balance ───────────────────────────────────────────
-  Future<Map<String, dynamic>> getWalletBalance() async {
-    final response = await _dio.get('/wallet/balance');
-    return response.data as Map<String, dynamic>;
-  }
-
-  // ── Get Transaction History ──────────────────────────────────────
-  Future<List<dynamic>> getTransactions({int limit = 20}) async {
-    final response = await _dio.get(
-      '/wallet/transactions',
-      queryParameters: {'limit': limit},
-    );
-    return response.data['data'] as List<dynamic>;
-  }
-
-  // ── Release Escrow (Employer marks job complete) ─────────────────
+  // ── Release escrow ───────────────────────────────────────────────
   Future<void> releaseEscrow(String jobId) async {
     await _dio.post('/escrow/release', data: {'job_id': jobId});
-  }
-
-  // ── Get Virtual Account (for employer top-up) ────────────────────
-  Future<Map<String, dynamic>> getVirtualAccount() async {
-    final response = await _dio.get('/wallet/virtual-account');
-    return response.data as Map<String, dynamic>;
   }
 }

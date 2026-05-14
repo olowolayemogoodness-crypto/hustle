@@ -4,7 +4,7 @@ from datetime import datetime, timedelta, timezone
 import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
-from app.config import settings
+from app.core.config import settings
 from app.models.user import User
 from app.models.otp import OTPCode
 from app.core.security import create_access_token

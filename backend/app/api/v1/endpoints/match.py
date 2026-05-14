@@ -3,7 +3,7 @@ from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.config import settings
+from app.core.config import settings
 from app.core.logging import get_logger
 from app.db.deps import get_db
 from app.db.models.match_log import MatchLog
@@ -18,12 +18,16 @@ from app.schemas.match import (
     MatchStatusResponse,
 )
 from app.services.matching_engine import rank_candidates
-from app.services.decision_engine import select_recommended_workers
 from app.services.event_logger import worker_scores_to_events, persist_match_events
 from app.services.match_status_service import update_match_status
 
 logger = get_logger(__name__)
 router = APIRouter(prefix=settings.api_prefix, tags=["match"])
+
+
+def select_recommended_workers(ranked_workers, max_recommended: int = 3):
+    """Select top N recommended workers from ranked score results."""
+    return [worker.worker_id for worker in ranked_workers[:max_recommended]]
 
 
 @router.post("/match", response_model=MatchResponse)

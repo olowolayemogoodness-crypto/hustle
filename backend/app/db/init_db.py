@@ -1,12 +1,11 @@
 import logging
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
-
-import app.db.models  # noqa: F401  # ensure model classes are registered with Base.metadata
+import app.db.models  # noqa: F401
 from app.db.models.base import Base
 from app.db.session import engine as _engine
 
-engine: AsyncEngine = _engine  # type: ignore[assignment]
+engine: AsyncEngine = _engine
 logger = logging.getLogger(__name__)
 
 

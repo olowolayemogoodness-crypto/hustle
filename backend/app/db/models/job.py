@@ -6,7 +6,7 @@ from sqlalchemy.sql import func
 
 from app.db.types import GUID
 
-from app.config import settings
+from app.core.config import settings
 from app.db.models.base import Base
 
 

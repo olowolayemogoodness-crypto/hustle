@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
 BASE_DIR = Path(__file__).resolve().parent
-ROOT_DIR = BASE_DIR.parent
+ROOT_DIR = BASE_DIR.parent.parent
 DOTENV_PATH = ROOT_DIR / ".env"
 
 
@@ -40,6 +40,7 @@ class Settings(BaseSettings):
 
     host: str = "0.0.0.0"
     port: int = 8000
+    fallback_probability: float = 0.5
 
     api_prefix: str = "/api/v1"
 
@@ -105,6 +106,8 @@ class Settings(BaseSettings):
     # =========================================================
     # LOGGING
     # =========================================================
+    fallback_probability: float = 0.5
+
     logging_level: Literal[
         "DEBUG",
         "INFO",
@@ -112,60 +115,6 @@ class Settings(BaseSettings):
         "ERROR",
         "CRITICAL",
     ] = "INFO"
-
-    # =========================================================
-    # ML MODEL
-    # =========================================================
-    model_relative_path: str = "../scripts/model.joblib"
-
-    rule_weight: float = Field(
-        default=0.65,
-        ge=0,
-        le=1,
-    )
-
-    ml_weight: float = Field(
-        default=0.35,
-        ge=0,
-        le=1,
-    )
-
-    fallback_probability: float = Field(
-        default=0.5,
-        ge=0,
-        le=1,
-    )
-
-    match_threshold: float = Field(
-        default=0.0,
-        ge=0,
-        le=1,
-    )
-
-    max_worker_search_radius: float = Field(
-        default=20.0,
-        ge=1.0,
-        le=100.0,
-    )
-
-    max_workers_evaluated: int = Field(
-        default=50,
-        ge=1,
-        le=1000,
-    )
-
-    # =========================================================
-    # FEATURE ENGINEERING
-    # =========================================================
-    feature_columns: list[str] = [
-        "distance_km",
-        "skill_overlap",
-        "trust_score",
-        "rating",
-        "completion_rate",
-        "disputes",
-        "availability",
-    ]
 
     # =========================================================
     # CORS
@@ -178,20 +127,6 @@ class Settings(BaseSettings):
     # =========================================================
     # COMPUTED PROPERTIES
     # =========================================================
-    @property
-    def model_path(self) -> str:
-        return str(
-            (BASE_DIR / self.model_relative_path).resolve()
-        )
-
-    @computed_field
-    @property
-    def total_weight(self) -> float:
-        return round(
-            self.rule_weight + self.ml_weight,
-            4,
-        )
-
     @computed_field
     @property
     def is_production(self) -> bool:

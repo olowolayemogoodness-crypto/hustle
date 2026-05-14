@@ -2,15 +2,9 @@
 Pure matching engine — computes scores without side effects.
 No DB, no logging, no state mutations.
 """
-from typing import Any, Dict, List
+from typing import List
 
-from app.config import settings
-from app.ml.confidence import calculate_confidence
-from app.ml.explain import generate_explanation
-from app.ml.feature_engineering import extract_worker_features
-from app.ml.model import predict_success
-from app.ml.risk import calculate_risk_penalty
-from app.ml.scoring import calculate_rule_score, calculate_trust_score
+from app.core.config import settings
 from app.schemas.job import JobBase
 from app.schemas.match import WorkerScore, MatchExplanation
 from app.schemas.worker import WorkerResponse
@@ -28,9 +22,38 @@ def preprocess_workers(workers: List[WorkerResponse]) -> List[WorkerResponse]:
     )[: settings.max_workers_evaluated]
 
 
-def _build_ml_payload(features: Dict[str, Any]) -> Dict[str, Any]:
-    """Extract ML features for model inference."""
-    return {col: features.get(col, 0.0) for col in settings.feature_columns}
+def calculate_simple_score(job: JobBase, worker: WorkerResponse) -> float:
+    """Calculate a simple rule-based score for worker-job match."""
+    score = 0.0
+
+    # Distance scoring (closer is better)
+    if worker.distance_km is not None:
+        if worker.distance_km <= 5:
+            score += 30
+        elif worker.distance_km <= 10:
+            score += 20
+        elif worker.distance_km <= 20:
+            score += 10
+        elif worker.distance_km <= 50:
+            score += 5
+
+    # Skill matching (basic overlap)
+    job_skills = set(job.required_skills or [])
+    worker_skills = set(worker.skills or [])
+    skill_overlap = len(job_skills & worker_skills)
+    if job_skills:
+        skill_match_ratio = skill_overlap / len(job_skills)
+        score += skill_match_ratio * 40
+
+    # Experience bonus
+    if worker.years_experience and worker.years_experience >= 2:
+        score += min(worker.years_experience * 2, 20)
+
+    # Rating bonus
+    if worker.average_rating and worker.average_rating >= 4.0:
+        score += (worker.average_rating - 4.0) * 10
+
+    return min(score, 100.0)  # Cap at 100
 
 
 def rank_candidates(job: JobBase, workers: List[WorkerResponse]) -> List[WorkerScore]:
@@ -45,58 +68,47 @@ def rank_candidates(job: JobBase, workers: List[WorkerResponse]) -> List[WorkerS
     results: List[WorkerScore] = []
 
     for worker in ordered_workers:
-        worker_data = worker.model_dump()
-        features = extract_worker_features(job, worker_data)
-
-        # Compute all scoring dimensions
-        trust_score = calculate_trust_score(features)
-        features["trust_score"] = trust_score
-
-        ml_payload = _build_ml_payload(features)
-        ml_probability = predict_success(ml_payload)
-
-        rule_score = calculate_rule_score(features)
-        risk_penalty = calculate_risk_penalty(features)
-
-        final_score = max(
-            0.0,
-            settings.rule_weight * rule_score
-            + settings.ml_weight * ml_probability
-            - risk_penalty,
-        )
+        final_score = calculate_simple_score(job, worker)
 
         # Apply threshold filtering
         if final_score < settings.match_threshold:
             continue
 
-        confidence = calculate_confidence(features)
-        explanation_dict = generate_explanation(features, risk_penalty, confidence)
-        explanation = MatchExplanation(**explanation_dict)
+        # Create simple explanation
+        explanation = MatchExplanation(
+            primary_reason="Distance and skill match",
+            factors=[
+                f"Distance: {worker.distance_km or 'unknown'} km",
+                f"Skill overlap: {len(set(job.required_skills or []) & set(worker.skills or []))} skills",
+                f"Experience: {worker.years_experience or 0} years",
+                f"Rating: {worker.average_rating or 0:.1f}"
+            ]
+        )
 
         # Build structured score object
         score = WorkerScore(
-            worker_id=worker_data.get("id", 0),
+            worker_id=worker.id,
             final_score=final_score,
-            rule_score=rule_score,
-            ml_probability=ml_probability,
-            risk_penalty=risk_penalty,
-            confidence=confidence,
-            trust_score=trust_score,
-            profile_completeness=features.get("profile_completeness", 0.0),
+            rule_score=final_score,
+            ml_probability=0.0,  # Not used in MVP
+            risk_penalty=0.0,    # Not used in MVP
+            confidence=0.8,      # Fixed confidence for MVP
+            trust_score=worker.average_rating or 0.0,
+            profile_completeness=0.8,  # Fixed for MVP
             explanation=explanation,
             metadata={
-                "skill_overlap": features.get("skill_overlap", 0.0),
-                "distance_score": features.get("distance_score", 0.0),
-                "availability_weighted": features.get("availability_weighted", 0.0),
-                "recent_activity_score": features.get("recent_activity_score", 0.0),
+                "skill_overlap": len(set(job.required_skills or []) & set(worker.skills or [])),
+                "distance_km": worker.distance_km,
+                "years_experience": worker.years_experience or 0,
+                "average_rating": worker.average_rating or 0.0,
             },
         )
         results.append(score)
 
-    # Rank by final_score, then by confidence, then by trust_score for determinism
+    # Rank by final_score descending
     ranked = sorted(
         results,
-        key=lambda s: (s.final_score, s.confidence, s.trust_score),
+        key=lambda s: s.final_score,
         reverse=True,
     )
 

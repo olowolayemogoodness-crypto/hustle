@@ -6,16 +6,14 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.health import router as health_router
-from app.api.match import router as match_router
-from app.api.predict import router as predict_router
-from app.api.feedback import router as feedback_router
-from app.api.analytics import router as analytics_router
-from app.config import settings
+from app.api.v1.endpoints.health import router as health_router
+from app.api.v1.endpoints.match import router as match_router
+from app.api.v1.endpoints.feedback import router as feedback_router
+from app.api.v1.endpoints.wallet import router as wallet_router
+from app.core.config import settings
 from app.core.logging import configure_logging, get_logger
 from app.core.middleware import request_timing_middleware
 from app.db.init_db import init_models
-from app.ml import model as ml_model
 
 configure_logging()
 logger = get_logger(__name__)
@@ -24,11 +22,6 @@ logger = get_logger(__name__)
 async def lifespan(app: FastAPI):
     logger.info("Starting Hustle backend")
     await init_models()
-    ml_model.load_model()
-    if ml_model.check_model_ready():
-        logger.info("ML model ready for inference")
-    else:
-        logger.warning("ML model is not ready: inference will use fallback probabilities")
     yield
     logger.info("Shutting down Hustle backend")
 
@@ -37,10 +30,9 @@ app = FastAPI(title=settings.app_name, version=settings.app_version, lifespan=li
 
 # Routes
 app.include_router(health_router)
-app.include_router(predict_router)
 app.include_router(match_router)
 app.include_router(feedback_router)
-app.include_router(analytics_router)
+app.include_router(wallet_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.allowed_origins,

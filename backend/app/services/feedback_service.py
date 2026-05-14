@@ -3,7 +3,7 @@ from uuid import UUID
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app import config
+from app.core import config
 from app.db.models.match_log import MatchLog
 from app.db.models.worker_profile import WorkerProfile
 from app.services.uuid_utils import parse_uuid, split_match_log_id
