@@ -1,3 +1,4 @@
+from datetime import datetime
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update
@@ -186,7 +187,7 @@ class EscrowService:
 
         # 3. Update escrow
         escrow.status      = "released"
-        escrow.released_at = datetime.utcnow()
+        escrow.released_at = datetime.now()
 
         # 4. Log — worker credit
         db.add(WalletTransaction(

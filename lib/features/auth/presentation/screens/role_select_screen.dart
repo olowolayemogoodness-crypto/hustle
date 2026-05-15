@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hustle/core/network/dio_client.dart';
 import '../../../../core/config/theme.dart';
 import '../../../../core/router/routes.dart';
 import '../providers/auth_provider.dart';
@@ -16,18 +17,28 @@ class RoleSelectScreen extends ConsumerStatefulWidget {
 class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
   String? _selected = 'worker'; // default worker selected as per design
   bool _loading = false;
-
-  Future<void> _continue() async {
-    if (_selected == null) return;
-    setState(() => _loading = true);
+// In role_select_screen.dart — update _continue()
+Future<void> _continue() async {
+  if (_selected == null) return;
+  setState(() => _loading = true);
+  
+  try {
+    // Call backend to set role
+    await DioClient.instance.post(
+      '/api/v1/auth/role',
+      data: {'role': _selected},
+    );
+    
+    // Then update Supabase user metadata
     await ref.read(authProvider.notifier).setRole(_selected!);
-    if (mounted) {
-      _selected == 'worker'
-          ? context.go(Routes.workerSetup)
-          : context.go(Routes.discovery);
-    }
+    
+  } catch (e) {
+    setState(() => _loading = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed: $e')),
+    );
   }
-
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(

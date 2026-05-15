@@ -8,9 +8,11 @@ class Env {
   static String get mapTilerKey      => _get('MAPTILER_KEY');
   static String get termiiApiKey     => _get('TERMII_API_KEY');
   static String get termiiSenderId   => _get('TERMII_SENDER_ID');
-  static String get apiBaseUrl       => _get('API_BASE_URL');
+  
   static String get squadPublicKey   => _get('SQUAD_PUBLIC_KEY');
-
+// lib/core/env.dart
+static String get apiBaseUrl => 
+    dotenv.env['API_BASE_URL'] ?? 'http://localhost:8000';
   static String _get(String key) {
     final value = dotenv.env[key];
     assert(value != null && value.isNotEmpty, 
