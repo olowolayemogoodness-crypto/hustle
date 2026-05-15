@@ -6,7 +6,7 @@ from app.schemas.auth import (
     TokenResponse, RoleSetRequest, KYCSubmitRequest,
 )
 from app.services import auth_service, kyc_service
-from app.dependencies import get_current_user
+from app.dependencies import get_current_user, require_worker, require_employer
 from app.db.models.user import User
 
 router = APIRouter(prefix="/auth", tags=["auth"])
@@ -49,11 +49,11 @@ async def set_role(
 
     # Create the matching profile row
     if body.role == "worker":
-        from app.models.worker_profile import WorkerProfile
+        from app.db.models.worker_profile import WorkerProfile
         profile = WorkerProfile(user_id=current_user.id)
         db.add(profile)
     else:
-        from app.models.employer_profile import EmployerProfile
+        from app.db.models.employer_profile import EmployerProfile
         profile = EmployerProfile(user_id=current_user.id)
         db.add(profile)
 

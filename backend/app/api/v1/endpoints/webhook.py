@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Request, HTTPException, Header
 from sqlalchemy.ext.asyncio import AsyncSession
+import supabase
 from app.db.session import get_db
 from app.services.squad_service import SquadService
 from app.services.escrow_service import EscrowService

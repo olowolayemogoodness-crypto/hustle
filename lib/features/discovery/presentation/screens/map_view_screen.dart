@@ -724,10 +724,10 @@ class _NearbyJobsSheetState extends State<_NearbyJobsSheet> {
     return DraggableScrollableSheet(
       controller: _sheetController,
       initialChildSize: keyboardOpen ? 0.0 : 0.30,
-      minChildSize: 0.0,           // ← allows full collapse
+      minChildSize: 0.07,           // ← prevents full collapse
       maxChildSize: 0.55,
       snap: true,
-      snapSizes: const [0.0, 0.25, 0.30, 0.55],
+      snapSizes: const [0.07, 0.25, 0.30, 0.55],
       builder: (context, scrollController) {
         return Container(
           decoration: const BoxDecoration(
@@ -741,60 +741,64 @@ class _NearbyJobsSheetState extends State<_NearbyJobsSheet> {
               ),
             ],
           ),
-          child: Column(
-            children: [
-              // Drag handle
-              Padding(
-                padding: const EdgeInsets.only(top: 10, bottom: 4),
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: AppColors.borderLight,
-                    borderRadius: BorderRadius.circular(2),
+          child: SingleChildScrollView(
+            controller: scrollController,
+            physics: const ClampingScrollPhysics(),
+            child: Column(
+              children: [
+                // Drag handle
+                Padding(
+                  padding: const EdgeInsets.only(top: 10, bottom: 4),
+                  child: Container(
+                    width: 38,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: AppColors.borderLight,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
                 ),
-              ),
-              // Header
-              Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-                child: Row(
-                  children: [
-                    Container(
-                      width: 8, height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.success,
-                        shape: BoxShape.circle,
+                // Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 8, height: 8,
+                        decoration: const BoxDecoration(
+                          color: AppColors.success,
+                          shape: BoxShape.circle,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      '${widget.jobs.length} Jobs Near You',
-                      style: const TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 15,
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                      const SizedBox(width: 8),
+                      Text(
+                        '${widget.jobs.length} Jobs Near You',
+                        style: const TextStyle(
+                          fontFamily: 'DMSans',
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-              ),
-              // Horizontal job cards
-              Expanded(
-                child: ListView.separated(
-                  controller: scrollController,
-                  scrollDirection: Axis.horizontal,
-                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                  itemCount: widget.jobs.length,
-                  separatorBuilder: (_, __) => const SizedBox(width: 12),
-                  itemBuilder: (context, i) => _MapJobCard(
-                    job: widget.jobs[i],
-                    isSelected: widget.jobs[i].id == widget.selectedId,
+                    ],
                   ),
                 ),
-              ),
-            ],
+                // Horizontal job cards
+                SizedBox(
+                  height: 190,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                    itemCount: widget.jobs.length,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (context, i) => _MapJobCard(
+                      job: widget.jobs[i],
+                      isSelected: widget.jobs[i].id == widget.selectedId,
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },

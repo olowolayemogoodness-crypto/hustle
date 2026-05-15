@@ -11,16 +11,18 @@ def _get_jwks_client() -> PyJWKClient:
     print(f"JWKS URL: {url}")  # debug
     return PyJWKClient(url, cache_keys=True)
 
-
 def decode_access_token(token: str) -> dict:
     try:
         client = _get_jwks_client()
+        
+        # DEBUG
+        header = jwt.get_unverified_header(token)
+        print(f"Token kid: {header['kid']}")
+        print(f"Token alg: {header['alg']}")
+        
         signing_key = client.get_signing_key_from_jwt(token)
-
-        unverified = jwt.decode(token, options={"verify_signature": False})
-        print("Unverified payload:", unverified)
-        print("Signing key:", signing_key.key)
-
+        print(f"JWKS key id: {signing_key.key_id}")
+        
         return jwt.decode(
             token,
             signing_key.key,
@@ -30,5 +32,5 @@ def decode_access_token(token: str) -> dict:
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
     except jwt.InvalidTokenError as e:
-        print("JWT error:", e)
+        print(f"JWT error: {e}")
         raise HTTPException(status_code=401, detail=f"Invalid token: {e}")

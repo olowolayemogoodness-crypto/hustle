@@ -4,7 +4,14 @@ class SecureStorage {
   SecureStorage._();
 
 
-  
+   static const _onboardingKey = 'seen_onboarding';
+
+  static Future<void> setSeenOnboarding() async {
+    await _storage.write(
+      key: _onboardingKey,
+      value: 'true',
+    );
+  }
 
   static const _storage = FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
@@ -39,10 +46,12 @@ class SecureStorage {
   static Future<String?> getPhone()        => _storage.read(key: _kPhone);
   static Future<String?> getRole()         => _storage.read(key: _kRole);
   static Future<String?> getKycStatus()    => _storage.read(key: _kKycStatus);
+  
   static Future<bool> hasSeenOnboarding() async {
-    final val = await _storage.read(key: _kSeenOnboarding);
-    return val == 'true';
+    final value = await _storage.read(key: _onboardingKey);
+    return value == 'true';
   }
+
   static Future<void> markOnboardingSeen() =>
       _storage.write(key: _kSeenOnboarding, value: 'true');
 

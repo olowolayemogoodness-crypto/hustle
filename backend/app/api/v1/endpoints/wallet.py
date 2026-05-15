@@ -4,11 +4,11 @@ from sqlalchemy import select, desc
 from pydantic import BaseModel
 from app.db.session import get_db
 from app.dependencies import get_current_user
-from app.models.user import User
+from app.db.models.user import User
 from app.db.models.wallet import (EmployerWallet, WorkerWallet, WalletTransaction, Withdrawal)
 from app.services.squad_service import SquadService
 from app.services.escrow_service import EscrowService
-
+import uuid  # ← add this at the top
 router = APIRouter(prefix="/wallet", tags=["wallet"])
 
 
@@ -29,32 +29,21 @@ async def initiate_topup(
         raise HTTPException(status_code=403, detail="Employers only")
 
     if body.amount_kobo < 100000:
-        raise HTTPException(
-            status_code=400,
-            detail="Minimum top-up is ₦1,000"
-        )
+        raise HTTPException(status_code=400, detail="Minimum top-up is ₦1,000")
 
     reference = SquadService.generate_ref("HUSTLE_TOPUP")
 
-    result = await SquadService.initiate_dynamic_va(
-        amount_kobo     = body.amount_kobo,
-        transaction_ref = reference,
-        email           = current_user.email or "",
-        duration        = body.duration,
+    result = await SquadService.initiate_payment(
+        amount_kobo=body.amount_kobo,
+        transaction_ref=reference,
+        email=current_user.email or "",
     )
 
-    data = result["data"]
-
     return {
-        "reference":              reference,
-        "virtual_account_number": data["virtual_account_number"],
-        "bank_name":              data.get("bank_name", "GTBank"),
-        "account_name":           data.get("account_name", "Hustle Platform"),
-        "amount_kobo":            body.amount_kobo,
-        "expires_in_seconds":     body.duration,
+        "reference":    reference,
+        "checkout_url": result["data"]["checkout_url"],
+        "amount_kobo":  body.amount_kobo,
     }
-
-
 # ── Employer: Re-query top-up status ──────────────────────────────
 
 @router.get("/topup/status/{reference}")
@@ -62,33 +51,13 @@ async def check_topup_status(
     reference:    str,
     current_user: User = Depends(get_current_user),
 ):
-    result = await SquadService.requery_dynamic_va(reference)
-    attempts = result.get("data", [])
-
-    # Find latest successful attempt
-    success = next(
-        (a for a in attempts if a["transaction_status"] == "SUCCESS"),
-        None,
-    )
-
-    if success:
-        return {
-            "status":      "success",
-            "amount_kobo": int(float(success["amount_received"]) * 100),
-            "reference":   reference,
-        }
-
-    # Check if any attempt exists
-    if attempts:
-        latest = attempts[-1]
-        return {
-            "status":    latest["transaction_status"].lower(),
-            "reference": reference,
-        }
-
-    return {"status": "pending", "reference": reference}
-
-
+    result = await SquadService.verify_transaction(reference)
+    data = result.get("data", {})
+    return {
+        "status":      data.get("transaction_status", "pending").lower(),
+        "reference":   reference,
+        "amount_kobo": int(data.get("transaction_amount", 0)),
+    }
 # ── Wallet balance ─────────────────────────────────────────────────
 
 @router.get("/balance")
@@ -98,10 +67,8 @@ async def get_balance(
 ):
     if current_user.role == "employer":
         result = await db.execute(
-            select(EmployerWallet).where(
-                EmployerWallet.user_id == str(current_user.id)
-            )
-        )
+    select(EmployerWallet).where(EmployerWallet.user_id == uuid.UUID(str(current_user.id)))
+)
         wallet = result.scalar_one_or_none()
         return {
             "available_kobo": wallet.available_kobo if wallet else 0,
@@ -111,10 +78,10 @@ async def get_balance(
         }
 
     result = await db.execute(
-        select(WorkerWallet).where(
-            WorkerWallet.user_id == str(current_user.id)
-        )
+    select(WorkerWallet).where(
+        WorkerWallet.user_id == uuid.UUID(str(current_user.id))
     )
+)
     wallet = result.scalar_one_or_none()
     return {
         "available_kobo":  wallet.available_kobo  if wallet else 0,
@@ -133,11 +100,11 @@ async def get_transactions(
     limit:        int = 20,
 ):
     result = await db.execute(
-        select(WalletTransaction)
-        .where(WalletTransaction.user_id == str(current_user.id))
-        .order_by(desc(WalletTransaction.created_at))
-        .limit(limit)
-    )
+    select(WalletTransaction)
+    .where(WalletTransaction.user_id == uuid.UUID(str(current_user.id)))
+    .order_by(desc(WalletTransaction.created_at))
+    .limit(limit)
+)
     txns = result.scalars().all()
     return {
         "data": [

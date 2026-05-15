@@ -9,8 +9,11 @@ BASE_DIR = Path(__file__).resolve().parent
 ROOT_DIR = BASE_DIR.parent.parent
 DOTENV_PATH = ROOT_DIR / ".env"
 
-
 class Settings(BaseSettings):
+    squad_base_url: str = "https://sandbox-api-d.squadco.com"
+    squad_secret_key: str = ""
+    squad_webhook_secret: str = ""
+
     """
     Centralized application settings.
     Automatically loaded from .env with HUSTLE_ prefix.
