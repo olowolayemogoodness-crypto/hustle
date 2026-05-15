@@ -1,7 +1,7 @@
 import uuid
 
-from sqlalchemy import Boolean, Float, DateTime, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy import Boolean, Float, DateTime, ForeignKey, Integer, String
+from sqlalchemy.orm import Mapped, mapped_column, deferred
 from sqlalchemy.sql import func
 
 from app.db.types import GUID
@@ -86,6 +86,41 @@ class MatchLog(Base):
         Float,
         nullable=True,
     )
+
+    distance_km: Mapped[float | None] = deferred(mapped_column(
+        Float,
+        nullable=True,
+    ))
+
+    skill_overlap_ratio: Mapped[float | None] = deferred(mapped_column(
+        Float,
+        nullable=True,
+    ))
+
+    worker_completion_rate: Mapped[float | None] = deferred(mapped_column(
+        Float,
+        nullable=True,
+    ))
+
+    worker_trust_score: Mapped[float | None] = deferred(mapped_column(
+        Float,
+        nullable=True,
+    ))
+
+    years_experience: Mapped[int | None] = deferred(mapped_column(
+        Integer,
+        nullable=True,
+    ))
+
+    job_budget: Mapped[float | None] = deferred(mapped_column(
+        Float,
+        nullable=True,
+    ))
+
+    job_urgency: Mapped[int | None] = deferred(mapped_column(
+        Integer,
+        nullable=True,
+    ))
 
     created_at: Mapped[DateTime] = mapped_column(
         DateTime(timezone=True),
