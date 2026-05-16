@@ -39,11 +39,11 @@ async def set_role(
     db: AsyncSession = Depends(get_db),
 ):
     """Set worker or employer role — called once after first login."""
-    if current_user.role is not None:
+    if current_user.role is not None and current_user.role != body.role:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Role already set. Contact support to change.",
-        )
+        status_code=status.HTTP_400_BAD_REQUEST,
+        detail=f"Role already set to {current_user.role}",
+    )
     current_user.role = body.role
     db.add(current_user)
 

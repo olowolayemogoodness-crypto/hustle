@@ -55,6 +55,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
 
       if (auth is AuthInitial || auth is AuthLoading) return Routes.splash;
 
+      // Wait for the onboarding flag before leaving splash.
+      if (seenOnboarding == null && location == Routes.splash) return Routes.splash;
+
+      // Boot onboarding for first-time use before any other route.
+      if (seenOnboarding == false && location != Routes.onboarding) {
+        return Routes.onboarding;
+      }
+
       if (auth is AuthUnauthenticated) {
         if (location == Routes.phoneAuth ||
             location == Routes.onboarding ||
@@ -62,7 +70,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           if (location == Routes.splash) {
             // If onboarding flag not yet loaded, stay on splash
             if (seenOnboarding == null) return Routes.splash;
-            // Otherwise, show onboarding only if not seen
             return seenOnboarding ? Routes.phoneAuth : Routes.onboarding;
           }
           return null;
@@ -74,10 +81,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         final user = auth.user;
 
         if (location == Routes.splash ||
-            location == Routes.phoneAuth ||
-            location == Routes.onboarding) {
+            location == Routes.phoneAuth) {
           if (user.needsRole) return Routes.roleSelect;
           return Routes.discovery;
+        }
+
+        if (location == Routes.onboarding) {
+          return null;
         }
 
         if (user.needsRole &&

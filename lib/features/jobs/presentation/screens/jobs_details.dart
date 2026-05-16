@@ -798,6 +798,21 @@ class _ApplyButtonState extends ConsumerState<_ApplyButton> {
   bool _loading  = false;
   bool _applied  = false;
 
+
+  Future<void> _checkIfApplied() async {
+    try {
+      final resp = await DioClient.instance.get('/api/v1/applications/my');
+      final apps = (resp.data['data'] as List?) ?? [];
+      final alreadyApplied = apps.any(
+        (a) => a['job_id'] == widget.job.id,
+      );
+      if (alreadyApplied && mounted) {
+        setState(() => _applied = true);
+      }
+    } catch (_) {}
+  }
+
+
   Future<void> _apply() async {
     setState(() => _loading = true);
     try {
@@ -815,18 +830,25 @@ class _ApplyButtonState extends ConsumerState<_ApplyButton> {
         );
       }
     } on DioException catch (e) {
-      if (mounted) {
-        final msg = e.response?.data['detail'] ?? 'Failed to apply';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(msg)),
-        );
-      }
-    } finally {
+  if (mounted) {
+    final detail = e.response?.data is Map 
+        ? e.response?.data['detail'] 
+        : e.response?.data?.toString();
+    final msg = detail ?? 'Failed to apply';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+  }
+}finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   @override
+  void initState() {
+    super.initState();
+    _checkIfApplied();
+  }
   Widget build(BuildContext context) {
     if (_applied) {
       return Container(
