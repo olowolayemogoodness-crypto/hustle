@@ -78,6 +78,36 @@ class JobListing {
   final double longitude;
   final String skillRequired;
 
+
+
+factory JobListing.fromBackend(Map<String, dynamic> json) {
+  final payKobo = json['pay_per_worker'] as int? ?? 0;
+  return JobListing(
+    id:             json['id'] as String,
+    title:          json['title'] as String,
+    employerName:   json['employer_id'] as String,
+    employerAvatarUrl: null,
+    locationName:   json['location_name'] as String? ?? '',
+    payKobo:        payKobo,
+    distanceKm:     (json['distance_km'] as num?)?.toDouble() ?? 0.0,
+    rating:         0.0,
+    reviewCount:    0,
+    urgencyType:    JobUrgencyType.open,
+    daysLeft:       null,
+    hasEscrow:      true,
+    accentColor:    JobAccentColor.green,
+    iconColor:      const Color(0xFF1A5C38),
+    iconEmoji:      '💼',
+    tags:           const [],
+    isQuickApply:   true,
+    latitude:       (json['latitude']  as num?)?.toDouble() ?? 0.0,
+    longitude:      (json['longitude'] as num?)?.toDouble() ?? 0.0,
+    skillRequired:  (json['required_skills'] as List?)
+                        ?.firstOrNull?.toString() ?? '',
+  );
+}
+
+
   String get distanceDisplay => '${distanceKm.toStringAsFixed(1)}km';
 
   String get urgencyLabel {

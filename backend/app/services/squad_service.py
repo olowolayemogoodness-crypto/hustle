@@ -6,52 +6,6 @@ from app.core.config import settings
 
 
 class SquadService:
-    @staticmethod
-    async def initiate_payment(
-        amount_kobo: int,
-        transaction_ref: str,
-        email: str,
-    ) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.post(
-            f"{settings.squad_base_url}/transaction/initiate",
-            headers=SquadService._headers(),
-            json={
-                "amount":          amount_kobo,
-                "transaction_ref": transaction_ref,
-                "email":           email,
-                "currency":        "NGN",
-                "initiate_type":   "inline",
-            },
-            timeout=30,
-        )
-        if not resp.is_success:
-            print(f"Squad error: {resp.status_code} {resp.text}")
-            resp.raise_for_status()
-        return resp.json()
-
-
-
-    @staticmethod
-    async def verify_transaction(transaction_ref: str) -> dict:
-        async with httpx.AsyncClient() as client:
-            resp = await client.get(
-            f"{settings.squad_base_url}/transaction/verify/{transaction_ref}",
-            headers=SquadService._headers(),
-            timeout=30,
-        )
-        if not resp.is_success:
-            print(f"Squad verify error: {resp.status_code} {resp.text}")
-            resp.raise_for_status()
-        return resp.json()    
-    @staticmethod
-    def verify_webhook(body: bytes, signature: str) -> bool:
-        computed = hmac.new(
-        settings.squad_webhook_secret.encode(),
-        body,
-        hashlib.sha512,
-    ).hexdigest()
-        return hmac.compare_digest(computed, signature.lower())
 
     @staticmethod
     def _headers() -> dict:
@@ -60,49 +14,152 @@ class SquadService:
             "Content-Type":  "application/json",
         }
 
-    # ── Generate unique reference ──────────────────────────────────
     @staticmethod
     def generate_ref(prefix: str = "HUSTLE") -> str:
         return f"{prefix}_{uuid.uuid4().hex[:16].upper()}"
 
-    # ── Dynamic VA: Initiate transaction ──────────────────────────
+    # ── Static Virtual Account ─────────────────────────────────────
+
     @staticmethod
-    async def initiate_dynamic_va(
-        amount_kobo:     int,
-        transaction_ref: str,
-        email:           str,
-        duration:        int = 600,  # 10 minutes in seconds
+    async def create_static_va(
+        customer_identifier: str,
+        first_name:          str,
+        last_name:           str,
+        email:               str,
+        phone:               str,
+        bvn:                 str,
+        dob:                 str,
+        gender:              str,
+        address:             str,
+        beneficiary_account: str,
     ) -> dict:
-        """
-        Assigns a VA from your pool for this transaction.
-        Returns virtual_account_number, bank, expiry.
-        """
+        """Create a permanent virtual account for an employer."""
         async with httpx.AsyncClient() as client:
             resp = await client.post(
-                f"{settings.squad_base_url}/virtual-account/initiate-dynamic-virtual-account",
+                f"{settings.squad_base_url}/virtual-account",
                 headers=SquadService._headers(),
                 json={
-                    "amount":          amount_kobo,
-                    "transaction_ref": transaction_ref,
-                    "duration":        duration,
-                    "email":           email,
+                    "customer_identifier":  customer_identifier,
+                    "first_name":           first_name,
+                    "last_name":            last_name,
+                    "mobile_num":           phone,
+                    "email":                email,
+                    "bvn":                  bvn,
+                    "dob":                  dob,
+                    "address":              address,
+                    "gender":               gender,
+                    "beneficiary_account":  beneficiary_account,
                 },
                 timeout=30,
             )
-            resp.raise_for_status()
+            if not resp.is_success:
+                raise Exception(f"Squad error: {resp.status_code} - {resp.text}")
             return resp.json()
 
-    # ── Dynamic VA: Re-query transaction ──────────────────────────
     @staticmethod
-    async def requery_dynamic_va(transaction_ref: str) -> dict:
-        """
-        Check all payment attempts for a transaction.
-        Returns array of SUCCESS/MISMATCH/EXPIRED attempts.
-        """
+    async def get_static_va(customer_identifier: str) -> dict:
+        """Get VA details by customer identifier."""
         async with httpx.AsyncClient() as client:
             resp = await client.get(
-                f"{settings.squad_base_url}/virtual-account/get-dynamic-virtual-account-transactions/{transaction_ref}",
+                f"{settings.squad_base_url}/virtual-account/{customer_identifier}",
                 headers=SquadService._headers(),
                 timeout=15,
             )
-            resp.raise_for_status
+            if not resp.is_success:
+                raise Exception(f"Squad error: {resp.status_code} - {resp.text}")
+            return resp.json()
+
+    @staticmethod
+    async def simulate_payment(
+    virtual_account_number: str,
+    amount:                 int,
+) -> dict:
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+            f"{settings.squad_base_url}/virtual-account/simulate/payment",
+            headers=SquadService._headers(),
+            json={
+                "virtual_account_number": virtual_account_number,
+                "amount":                 str(amount),  # ← string not int
+            },
+            timeout=15,
+        )
+        if not resp.is_success:
+            raise Exception(f"Squad error: {resp.status_code} - {resp.text}")
+        return resp.json()
+    # ── Transfer API ───────────────────────────────────────────────
+
+    @staticmethod
+    async def lookup_account(
+        bank_code:      str,
+        account_number: str,
+    ) -> dict:
+        """Verify recipient bank account before transfer."""
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{settings.squad_base_url}/payout/account/lookup",
+                headers=SquadService._headers(),
+                json={
+                    "bank_code":      bank_code,
+                    "account_number": account_number,
+                },
+                timeout=15,
+            )
+            if not resp.is_success:
+                raise Exception(f"Squad error: {resp.status_code} - {resp.text}")
+            return resp.json()
+
+    @staticmethod
+    async def transfer_to_bank(
+        amount_kobo:    int,
+        bank_code:      str,
+        account_number: str,
+        account_name:   str,
+        narration:      str,
+        reference:      str,
+    ) -> dict:
+        """Send funds from Squad ledger to any Nigerian bank."""
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{settings.squad_base_url}/payout/transfer",
+                headers=SquadService._headers(),
+                json={
+                    "transaction_reference": reference,
+                    "amount":                str(amount_kobo),
+                    "bank_code":             bank_code,
+                    "account_number":        account_number,
+                    "account_name":          account_name,
+                    "currency_id":           "NGN",
+                    "remark":                narration,
+                },
+                timeout=30,
+            )
+            if not resp.is_success:
+                raise Exception(f"Squad error: {resp.status_code} - {resp.text}")
+            return resp.json()
+
+    @staticmethod
+    async def requery_transfer(transaction_ref: str) -> dict:
+        """Re-query transfer status — call on 424 timeout."""
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(
+                f"{settings.squad_base_url}/payout/requery",
+                headers=SquadService._headers(),
+                json={"transaction_reference": transaction_ref},
+                timeout=15,
+            )
+            if not resp.is_success:
+                raise Exception(f"Squad error: {resp.status_code} - {resp.text}")
+            return resp.json()
+
+    # ── Webhook validation ─────────────────────────────────────────
+
+    @staticmethod
+    def verify_webhook(body: bytes, signature: str) -> bool:
+        """Validate x-squad-encrypted-body header."""
+        computed = hmac.new(
+            settings.squad_secret_key.encode(),
+            body,
+            hashlib.sha512,
+        ).hexdigest()
+        return hmac.compare_digest(computed, signature.lower())

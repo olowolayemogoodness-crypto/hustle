@@ -35,6 +35,30 @@ class WorkerProfile {
 
   String get primarySkillsDisplay => primarySkills.join(' · ');
 
+
+  // lib/features/profile/data/models/profile_model.dart
+
+factory WorkerProfile.fromBackend(Map<String, dynamic> json) {
+  return WorkerProfile(
+    id:             json['user_id'] as String,
+    fullName:       json['full_name'] as String? ?? 'Worker',
+    avatarUrl:      json['avatar_url'] as String?,
+    skills:         List<String>.from(json['skills'] ?? []),
+    primarySkills:  List<String>.from(
+                        (json['skills'] as List?)?.take(3) ?? []),
+    location:       'Lagos',
+    joinedAt:       DateTime.now(),
+    totalJobs:      json['total_jobs'] as int? ?? 0,
+    trustScore:     (json['trust_score'] as num?)?.toDouble() ?? 50.0,
+    completionRate: (json['completion_rate'] as num?)?.toDouble() ?? 0.0,
+    disputesCount:  0,
+    ratingsCount:   0,
+    isVerified:     json['is_verified'] as bool? ?? false,
+    topPercentile:  'New Worker',
+    reviews:        const [],
+  );
+}
+
   factory WorkerProfile.mock() => WorkerProfile(
         id: 'worker-001',
         fullName: 'Emeka Okafor',

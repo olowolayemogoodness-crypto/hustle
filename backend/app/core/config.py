@@ -142,3 +142,12 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
+squad_secret_key:     str = ""
+squad_webhook_secret: str = ""
+squad_base_url:       str = "https://sandbox-api-d.squadco.com"
+# add inside Settings class before computed properties
+
+    # =========================================================
+    # SQUAD
+    # =========================================================
+    

@@ -9,7 +9,9 @@ import 'package:hustle/features/auth/presentation/screens/onboarding_screen.dart
 import 'package:hustle/features/onboarding/presentation/screens/splash_screen.dart';
 import 'package:hustle/features/onboarding/presentation/screens/worker_setup_screen.dart';
 import 'package:hustle/features/profile/presentation/screens/worker_profile_screen.dart';
+import 'package:hustle/features/wallet/presentation/screens/topup_screen.dart';
 import 'package:hustle/features/wallet/presentation/screens/wallet_screen.dart';
+import 'package:hustle/features/wallet/presentation/screens/withdrawal_screen.dart';
 import 'package:hustle/shared/widgets/bottom_nav.dart';
 import 'package:hustle/core/storage/secure_storage.dart';
 import '../../features/auth/presentation/providers/auth_provider.dart';
@@ -105,6 +107,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           ),
         ),
         routes: [
+          // lib/core/router/app_router.dart
+GoRoute(
+  path: Routes.topUp,
+  builder: (_, __) => const TopUpScreen(),
+),
+GoRoute(
+  path: Routes.withdrawal,
+  builder: (_, __) => const WithdrawalScreen(),
+),
           GoRoute(path: Routes.discovery, builder: (_, __) => const DiscoveryScreen()),
           GoRoute(path: Routes.mapView,   builder: (_, __) => const MapViewScreen()),
           GoRoute(path: Routes.wallet,    builder: (_, __) => const WalletScreen()),

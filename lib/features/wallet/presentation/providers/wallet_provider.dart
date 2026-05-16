@@ -1,42 +1,53 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:hustle/core/network/dio_client.dart';
 import '../../data/squad_repository.dart';
 import '../../data/models/wallet_model.dart';
 
 final squadRepositoryProvider = Provider((_) => SquadRepository());
 
 // ── Wallet balance ───────────────────────────────────────────────────
-class WalletNotifier extends AsyncNotifier<WalletState> {
-  late final SquadRepository _repo;
+// lib/features/wallet/presentation/providers/wallet_provider.dart
+// lib/features/wallet/presentation/providers/wallet_provider.dart
 
+class WalletNotifier extends AsyncNotifier<WalletState> {
   @override
   Future<WalletState> build() async {
-    _repo = ref.read(squadRepositoryProvider);
-    return _fetchWallet();
+    return _fetch();
   }
-
-  Future<WalletState> _fetchWallet() async {
+Future<WalletState> _fetch() async {
+  try {
     final results = await Future.wait([
-      _repo.getWalletBalance(),
-      _repo.getTransactions(),
+      DioClient.instance.get('/api/v1/wallet/balance'),
+      DioClient.instance.get('/api/v1/wallet/transactions'),
     ]);
+
+    print('Balance response: ${results[0].data}');      // ← add this
+    print('Transactions response: ${results[1].data}'); // ← add this
+
     return WalletState.fromJson(
-      balance:      results[0] as Map<String, dynamic>,
-      transactions: results[1] as List<dynamic>,
+      balance:      results[0].data as Map<String, dynamic>,
+      transactions: (results[1].data['data'] as List?) ?? [],
     );
+  } catch (e) {
+    print('Wallet fetch error: $e');  // ← add this
+    return WalletState.mock();
   }
+}
 
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(_fetchWallet);
+    state = await AsyncValue.guard(_fetch);
   }
 
-  // ── Release escrow ─────────────────────────────────────────────────
   Future<bool> releaseEscrow(String jobId) async {
     try {
-      await _repo.releaseEscrow(jobId);
+      await DioClient.instance.post(
+        '/api/v1/escrow/release',
+        data: {'job_id': jobId},
+      );
       await refresh();
       return true;
-    } catch (e) {
+    } catch (_) {
       return false;
     }
   }
@@ -44,52 +55,3 @@ class WalletNotifier extends AsyncNotifier<WalletState> {
 
 final walletProvider =
     AsyncNotifierProvider<WalletNotifier, WalletState>(WalletNotifier.new);
-
-// ── Withdrawal ──────────────────────────────────────────────────────────
-class WithdrawalNotifier extends AsyncNotifier<void> {
-  @override
-  Future<void> build() async {}
-
-  Future<String?> withdraw({
-    required int    amountKobo,
-    required String bankCode,
-    required String accountNumber,
-    required String accountName,
-  }) async {
-    state = const AsyncLoading();
-    try {
-      final repo   = ref.read(squadRepositoryProvider);
-      final result = await repo.initiateWithdrawal(
-        amountKobo:    amountKobo,
-        bankCode:      bankCode,
-        accountNumber: accountNumber,
-        accountName:   accountName,
-      );
-      state = const AsyncData(null);
-      // Refresh wallet balance
-      ref.invalidate(walletProvider);
-      return result['reference'] as String?;
-    } catch (e) {
-      state = AsyncError(e, StackTrace.current);
-      return null;
-    }
-  }
-
-  Future<Map<String, dynamic>?> lookupAccount({
-    required String bankCode,
-    required String accountNumber,
-  }) async {
-    try {
-      final repo = ref.read(squadRepositoryProvider);
-      return await repo.lookupAccount(
-        bankCode:      bankCode,
-        accountNumber: accountNumber,
-      );
-    } catch (_) {
-      return null;
-    }
-  }
-}
-
-final withdrawalProvider =
-    AsyncNotifierProvider<WithdrawalNotifier, void>(WithdrawalNotifier.new);

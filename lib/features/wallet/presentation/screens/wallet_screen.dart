@@ -1,6 +1,8 @@
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:hustle/core/router/routes.dart';
 import '../../../../core/config/theme.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../data/models/wallet_model.dart';
@@ -120,25 +122,25 @@ class _BalanceCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          Row(
-            children: [
-              Expanded(
-                child: _CardButton(
-                  label: 'Withdraw',
-                  icon: Icons.arrow_upward_rounded,
-                  onTap: () {},
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _CardButton(
-                  label: '+ Add Money',
-                  onTap: () {},
-                  filled: true,
-                ),
-              ),
-            ],
-          ),
+      Row(
+  children: [
+    Expanded(
+      child: _CardButton(
+        label: 'Withdraw',
+        icon: Icons.arrow_upward_rounded,
+        onTap: () => context.push(Routes.withdrawal), // ← add this
+      ),
+    ),
+    const SizedBox(width: 12),
+    Expanded(
+      child: _CardButton(
+        label: '+ Add Money',
+        onTap: () => context.push(Routes.topUp), // ← add this
+        filled: true,
+      ),
+    ),
+  ],
+),
         ],
       ),
     );
@@ -400,7 +402,9 @@ class _BarChart extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final maxAmount = earnings.map((e) => e.amount).reduce(math.max);
+   if (earnings.isEmpty) return const SizedBox.shrink();
+
+final maxAmount = earnings.map((e) => e.amount).reduce(math.max);
 
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,

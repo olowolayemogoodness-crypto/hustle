@@ -1,8 +1,8 @@
+# app/dependencies.py
 import jwt
 import httpx
-from cryptography.hazmat.primitives.asymmetric.ec import EllipticCurvePublicKey
-from jwt.algorithms import ECAlgorithm
 import json
+from jwt.algorithms import ECAlgorithm
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,34 +16,35 @@ logger = logging.getLogger(__name__)
 bearer_scheme = HTTPBearer()
 
 SUPABASE_JWKS_URL = f"{settings.supabase_url}/auth/v1/.well-known/jwks.json"
-async def _get_public_key(token: str):
-    header = jwt.get_unverified_header(token)
-    token_kid = header.get("kid")
-    print(f"Token kid: {token_kid}")
 
-    async with httpx.AsyncClient() as client:
-        resp = await client.get(SUPABASE_JWKS_URL)
-        jwks = resp.json()
-
-    print(f"Available kids: {[k['kid'] for k in jwks['keys']]}")
-
-    key_data = next(
-        (k for k in jwks["keys"] if k["kid"] == token_kid),
-        None
-    )
-
-    if key_data is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="No matching signing key found",
-        )
-
-    return ECAlgorithm.from_jwk(json.dumps(key_data))
+# Cache the public key — fetch once, reuse forever
+_public_key = None
 
 
-async def _decode_supabase_token(token: str) -> dict:
+def _get_public_key_sync() -> object:
+    """Fetch and cache Supabase public key synchronously at startup."""
+    import httpx as _httpx
+    global _public_key
+    if _public_key is not None:
+        return _public_key
+    resp  = _httpx.get(SUPABASE_JWKS_URL)
+    jwks  = resp.json()
+    key   = jwks["keys"][0]
+    _public_key = ECAlgorithm.from_jwk(json.dumps(key))
+    logger.info("Supabase public key cached")
+    return _public_key
+
+
+# Pre-fetch on import
+try:
+    _get_public_key_sync()
+except Exception as e:
+    logger.warning(f"Could not pre-fetch JWKS: {e}")
+
+
+def _decode_supabase_token(token: str) -> dict:
     try:
-        public_key = await _get_public_key(token)
+        public_key = _get_public_key_sync()
         payload = jwt.decode(
             token,
             public_key,
@@ -51,8 +52,6 @@ async def _decode_supabase_token(token: str) -> dict:
             audience="authenticated",
         )
         return payload
-    except HTTPException:
-        raise
     except jwt.ExpiredSignatureError:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -65,12 +64,12 @@ async def _decode_supabase_token(token: str) -> dict:
             detail="Invalid token",
         )
 
+
 async def get_current_user(
     credentials: HTTPAuthorizationCredentials = Depends(bearer_scheme),
     db:          AsyncSession = Depends(get_db),
 ) -> User:
-    payload = await _decode_supabase_token(credentials.credentials)
-
+    payload    = _decode_supabase_token(credentials.credentials)
     user_id    = payload.get("sub")
     email      = payload.get("email", "")
     full_name  = payload.get("user_metadata", {}).get("full_name")
@@ -89,7 +88,6 @@ async def get_current_user(
         full_name  = full_name,
         avatar_url = avatar_url,
     )
-
     return user
 
 

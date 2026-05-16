@@ -14,4 +14,12 @@ class AuthInterceptor extends Interceptor {
     }
     handler.next(options);
   }
+
+  @override
+  void onError(DioException err, ErrorInterceptorHandler handler) {
+    if (err.response?.statusCode == 401) {
+      // Token expired — Supabase will auto-refresh on next request
+    }
+    handler.next(err);
+  }
 }

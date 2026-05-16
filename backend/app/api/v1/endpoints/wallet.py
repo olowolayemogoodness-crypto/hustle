@@ -1,3 +1,4 @@
+import uuid
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
@@ -5,59 +6,108 @@ from pydantic import BaseModel
 from app.db.session import get_db
 from app.dependencies import get_current_user
 from app.db.models.user import User
-from app.db.models.wallet import (EmployerWallet, WorkerWallet, WalletTransaction, Withdrawal)
+from app.db.models.wallet import (
+    EmployerWallet, WorkerWallet,
+    WalletTransaction, Withdrawal,
+)
 from app.services.squad_service import SquadService
 from app.services.escrow_service import EscrowService
-import uuid  # ← add this at the top
+
 router = APIRouter(prefix="/wallet", tags=["wallet"])
 
 
-# ── Employer: Initiate top-up via Dynamic VA ───────────────────────
+# ── Employer: Get/Create Static Virtual Account ────────────────────
 
-class TopUpRequest(BaseModel):
-    amount_kobo: int
-    duration:    int = 600  # seconds — default 10 minutes
+class VACreateRequest(BaseModel):
+    first_name:          str
+    last_name:           str
+    phone:               str
+    bvn:                 str
+    dob:                 str    # MM/DD/YYYY
+    gender:              str    # "1" = Male, "2" = Female
+    address:             str
+    beneficiary_account: str    # GTBank account for settlement
 
 
-@router.post("/topup/initiate")
-async def initiate_topup(
-    body:         TopUpRequest,
+@router.post("/virtual-account")
+async def create_virtual_account(
+    body:         VACreateRequest,
     current_user: User = Depends(get_current_user),
     db:           AsyncSession = Depends(get_db),
 ):
+    """Create a permanent virtual account for employer top-ups."""
     if current_user.role != "employer":
         raise HTTPException(status_code=403, detail="Employers only")
 
-    if body.amount_kobo < 100000:
-        raise HTTPException(status_code=400, detail="Minimum top-up is ₦1,000")
+    customer_identifier = f"HUSTLE_{str(current_user.id)[:8].upper()}"
 
-    reference = SquadService.generate_ref("HUSTLE_TOPUP")
-
-    result = await SquadService.initiate_payment(
-        amount_kobo=body.amount_kobo,
-        transaction_ref=reference,
-        email=current_user.email or "",
+    result = await SquadService.create_static_va(
+        customer_identifier  = customer_identifier,
+        first_name           = body.first_name,
+        last_name            = body.last_name,
+        email                = current_user.email or "",
+        phone                = body.phone,
+        bvn                  = body.bvn,
+        dob                  = body.dob,
+        gender               = body.gender,
+        address              = body.address,
+        beneficiary_account  = body.beneficiary_account,
     )
 
-    return {
-        "reference":    reference,
-        "checkout_url": result["data"]["checkout_url"],
-        "amount_kobo":  body.amount_kobo,
-    }
-# ── Employer: Re-query top-up status ──────────────────────────────
-
-@router.get("/topup/status/{reference}")
-async def check_topup_status(
-    reference:    str,
-    current_user: User = Depends(get_current_user),
-):
-    result = await SquadService.verify_transaction(reference)
     data = result.get("data", {})
     return {
-        "status":      data.get("transaction_status", "pending").lower(),
-        "reference":   reference,
-        "amount_kobo": int(data.get("transaction_amount", 0)),
+        "virtual_account_number": data.get("virtual_account_number"),
+        "bank_name":              data.get("bank_name", "GTBank"),
+        "customer_identifier":    customer_identifier,
+        "message":                "Transfer any amount to this account to top up your wallet",
     }
+
+
+@router.get("/virtual-account")
+async def get_virtual_account(
+    current_user: User = Depends(get_current_user),
+):
+    """Get employer's existing virtual account details."""
+    if current_user.role != "employer":
+        raise HTTPException(status_code=403, detail="Employers only")
+
+    customer_identifier = f"HUSTLE_{str(current_user.id)[:8].upper()}"
+
+    try:
+        result = await SquadService.get_static_va(customer_identifier)
+        data   = result.get("data", {})
+        return {
+            "virtual_account_number": data.get("virtual_account_number"),
+            "bank_name":              data.get("bank_name", "GTBank"),
+            "customer_identifier":    customer_identifier,
+        }
+    except Exception:
+        raise HTTPException(
+            status_code=404,
+            detail="Virtual account not found. Create one first.",
+        )
+
+
+# ── Sandbox: Simulate payment ──────────────────────────────────────
+
+class SimulateRequest(BaseModel):
+    virtual_account_number: str
+    amount:                 str  # kobo
+
+
+@router.post("/simulate-payment")
+async def simulate_payment(
+    body:         SimulateRequest,
+    current_user: User = Depends(get_current_user),
+):
+    """Sandbox only — simulate a payment to test webhook."""
+    result = await SquadService.simulate_payment(
+        virtual_account_number = body.virtual_account_number,
+        amount                 = body.amount,
+    )
+    return result
+
+
 # ── Wallet balance ─────────────────────────────────────────────────
 
 @router.get("/balance")
@@ -67,21 +117,23 @@ async def get_balance(
 ):
     if current_user.role == "employer":
         result = await db.execute(
-    select(EmployerWallet).where(EmployerWallet.user_id == uuid.UUID(str(current_user.id)))
-)
+            select(EmployerWallet).where(
+                EmployerWallet.user_id == current_user.id
+            )
+        )
         wallet = result.scalar_one_or_none()
         return {
             "available_kobo": wallet.available_kobo if wallet else 0,
             "locked_kobo":    wallet.locked_kobo    if wallet else 0,
             "total_spent":    wallet.total_spent     if wallet else 0,
-            "this_month":     0,  # compute separately if needed
+            "this_month":     0,
         }
 
     result = await db.execute(
-    select(WorkerWallet).where(
-        WorkerWallet.user_id == uuid.UUID(str(current_user.id))
+        select(WorkerWallet).where(
+            WorkerWallet.user_id == current_user.id
+        )
     )
-)
     wallet = result.scalar_one_or_none()
     return {
         "available_kobo":  wallet.available_kobo  if wallet else 0,
@@ -100,11 +152,11 @@ async def get_transactions(
     limit:        int = 20,
 ):
     result = await db.execute(
-    select(WalletTransaction)
-    .where(WalletTransaction.user_id == uuid.UUID(str(current_user.id)))
-    .order_by(desc(WalletTransaction.created_at))
-    .limit(limit)
-)
+        select(WalletTransaction)
+        .where(WalletTransaction.user_id == current_user.id)
+        .order_by(desc(WalletTransaction.created_at))
+        .limit(limit)
+    )
     txns = result.scalars().all()
     return {
         "data": [

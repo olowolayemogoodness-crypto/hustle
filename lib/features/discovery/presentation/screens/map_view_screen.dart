@@ -6,7 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:hustle/core/services/nominatim_service.dart';
 
 import 'package:latlong2/latlong.dart';
-import '../../../jobs/data/models/job_model.dart';
+import '../../data/job_model.dart';
 
 
 import '../../../../core/config/app_config.dart';

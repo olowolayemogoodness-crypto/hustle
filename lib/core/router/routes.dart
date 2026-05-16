@@ -11,6 +11,9 @@ class Routes {
   static const String wallet       = '/wallet';
   static const String profile      = '/profile';
   static const String jobDetail    = '/job/:id';
+  // lib/core/router/routes.dart
+static const String topUp      = '/wallet/topup';
+static const String withdrawal = '/wallet/withdraw';
   static const String mapView = '/map'; // ← no longer /discovery/map
 }
 

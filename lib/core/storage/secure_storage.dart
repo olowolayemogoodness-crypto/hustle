@@ -3,12 +3,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class SecureStorage {
   SecureStorage._();
 
-
-   static const _onboardingKey = 'seen_onboarding';
+  static const _kSeenOnboarding = 'locgig_seen_onboarding';
 
   static Future<void> setSeenOnboarding() async {
     await _storage.write(
-      key: _onboardingKey,
+      key: _kSeenOnboarding,
       value: 'true',
     );
   }
@@ -23,7 +22,6 @@ class SecureStorage {
   static const _kPhone         = 'locgig_phone';
   static const _kRole          = 'locgig_role';
   static const _kKycStatus     = 'locgig_kyc_status';
-  static const _kSeenOnboarding = 'locgig_seen_onboarding';
 
   static Future<void> saveSession({
     required String token,
@@ -48,12 +46,13 @@ class SecureStorage {
   static Future<String?> getKycStatus()    => _storage.read(key: _kKycStatus);
   
   static Future<bool> hasSeenOnboarding() async {
-    final value = await _storage.read(key: _onboardingKey);
+    final value = await _storage.read(key: _kSeenOnboarding);
     return value == 'true';
   }
 
-  static Future<void> markOnboardingSeen() =>
-      _storage.write(key: _kSeenOnboarding, value: 'true');
+  static Future<void> markOnboardingSeen() async {
+    await _storage.write(key: _kSeenOnboarding, value: 'true');
+  }
 
   static Future<bool> hasSession() async {
     final token = await getToken();

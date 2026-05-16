@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hustle/core/network/dio_client.dart';
 import '../../../../core/config/theme.dart';
 import '../../../../core/router/routes.dart';
 // _GlowButton, _CircleBackButton
@@ -46,18 +47,40 @@ class _WorkerSetupScreenState extends ConsumerState<WorkerSetupScreen> {
   int _jobTypeIndex = 0;
   bool _loading = false;
 
-  Future<void> _complete() async {
-    if (_selectedSkills.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select at least one skill')),
-      );
-      return;
-    }
-    setState(() => _loading = true);
-    // TODO: POST to /api/v1/workers/me with skills + radius + job_type
-    await Future.delayed(const Duration(milliseconds: 800));
-    if (mounted) context.go(Routes.discovery);
+ // lib/features/onboarding/presentation/screens/worker_setup_screen.dart
+// Update _complete() method
+
+Future<void> _complete() async {
+  if (_selectedSkills.isEmpty) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Select at least one skill')),
+    );
+    return;
   }
+  setState(() => _loading = true);
+
+  try {
+    await DioClient.instance.put(
+      '/api/v1/profile/worker',
+      data: {
+        'skills':        _selectedSkills.toList(),
+        'job_radius_km': _radiusKm.toInt(),
+        'availability':  _kJobTypes[_jobTypeIndex]
+                            .toLowerCase()
+                            .replaceAll(' ', '_'),
+      },
+    );
+    if (mounted) context.go(Routes.discovery);
+
+  } catch (e) {
+    if (mounted) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Setup failed: $e')),
+      );
+    }
+  }
+}
 
   @override
   Widget build(BuildContext context) {

@@ -21,22 +21,24 @@ class _RoleSelectScreenState extends ConsumerState<RoleSelectScreen> {
 Future<void> _continue() async {
   if (_selected == null) return;
   setState(() => _loading = true);
-  
+
   try {
-    // Call backend to set role
+    // 1. Persist role in backend DB
     await DioClient.instance.post(
       '/api/v1/auth/role',
       data: {'role': _selected},
     );
-    
-    // Then update Supabase user metadata
+
+    // 2. Update Supabase metadata + local state
     await ref.read(authProvider.notifier).setRole(_selected!);
-    
+
   } catch (e) {
-    setState(() => _loading = false);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed: $e')),
-    );
+    if (mounted) {
+      setState(() => _loading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed: $e')),
+      );
+    }
   }
 }
   @override

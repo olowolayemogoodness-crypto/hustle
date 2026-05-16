@@ -5,7 +5,7 @@ import 'package:hustle/features/profile/presentation/screens/worker_profile_scre
 import '../../../../core/config/theme.dart';
 import '../../../../core/utils/formatters.dart';
 import '../../../../core/router/routes.dart';
-import '../../data/models/job_model.dart';
+import '../../../discovery/data/job_model.dart';
 import '../providers/filter_provider.dart';
 import '../providers/jobs_provider.dart';
 

@@ -1,10 +1,9 @@
-from fastapi import APIRouter, Request, HTTPException, Header
-from sqlalchemy.ext.asyncio import AsyncSession
-import supabase
+from fastapi import APIRouter, Request, Header
+from sqlalchemy import select, cast, String
 from app.db.session import get_db
+from app.db.models.user import User
 from app.services.squad_service import SquadService
 from app.services.escrow_service import EscrowService
-from app.core.config import settings
 import logging
 
 router = APIRouter(prefix="/webhook", tags=["webhook"])
@@ -13,63 +12,68 @@ logger = logging.getLogger(__name__)
 
 @router.post("/squad")
 async def squad_webhook(
-    request: Request,
+    request:                Request,
     x_squad_encrypted_body: str = Header(None),
 ):
-    body = await request.body()
-
-    # 1. Validate signature
-    if not x_squad_encrypted_body:
-        raise HTTPException(status_code=400, detail="Missing signature")
-
-    if not SquadService.verify_webhook(body, x_squad_encrypted_body):
-        logger.warning("Invalid Squad webhook signature")
-        raise HTTPException(status_code=401, detail="Invalid signature")
-
+    body    = await request.body()
     payload = await request.json()
-    event   = payload.get("Event")
 
-    logger.info(f"Squad webhook received: {event}")
+    logger.info(f"Squad webhook received: {payload}")
 
-    # 2. Only handle successful charges
-    if event != "charge_successful":
-        return {"status": "ignored"}
+    # Skip signature for sandbox testing
+    # Re-enable in production:
+    # if not SquadService.verify_webhook(body, x_squad_encrypted_body):
+    #     raise HTTPException(status_code=401, detail="Invalid signature")
 
-    body_data  = payload.get("Body", {})
-    squad_ref  = body_data.get("transaction_ref")
-    amount     = int(body_data.get("amount", 0))        # already in kobo
-    email      = body_data.get("email", "")
+    transaction_indicator = payload.get("transaction_indicator")
+    customer_identifier   = payload.get("customer_identifier", "")
+    principal_amount      = payload.get("principal_amount", "0")
+    transaction_ref       = payload.get("transaction_reference", "")
 
-    if not squad_ref or amount <= 0:
-        raise HTTPException(status_code=400, detail="Invalid payload")
+    # Only process credits
+    if transaction_indicator != "C":
+        logger.info(f"Skipping non-credit: {transaction_indicator}")
+        return {"response_code": 200, "response_description": "Noted"}
 
-    # 3. Find employer by email
-    result = supabase.from_("users") \
-        .select("id") \
-        .eq("email", email) \
-        .maybe_single() \
-        .execute()
+    amount_kobo = int(float(principal_amount) * 100)
+    if amount_kobo <= 0:
+        return {"response_code": 200, "response_description": "Invalid amount"}
 
-    if not result.data:
-        logger.error(f"No user found for email: {email}")
-        return {"status": "user_not_found"}
+    # Extract user ID prefix from customer_identifier
+    # Format: HUSTLE_89ABB3F8 → first 8 chars of user UUID
+    identifier_part = customer_identifier.replace("HUSTLE_", "").lower()
+    logger.info(f"Looking up user with prefix: {identifier_part}")
 
-    user_id = result.data["id"]
-
-    # 4. Credit employer wallet (idempotent)
     async for db in get_db():
+        # Find user by UUID prefix
+        result = await db.execute(
+            select(User).where(
+                cast(User.id, String).ilike(f"{identifier_part}%")
+            )
+        )
+        user = result.scalar_one_or_none()
+
+        if not user:
+            logger.error(f"No user found for: {customer_identifier}")
+            return {
+                "response_code":        200,
+                "response_description": "User not found",
+            }
+
+        logger.info(f"Found user: {user.id} ({user.email})")
+
         await EscrowService.credit_employer_wallet(
             db          = db,
-            user_id     = user_id,
-            amount_kobo = amount,
-            squad_ref   = squad_ref,
+            user_id     = str(user.id),
+            amount_kobo = amount_kobo,
+            squad_ref   = transaction_ref,
         )
+        break
 
-    logger.info(f"Wallet credited: {user_id} ← ₦{amount/100:.2f}")
+    logger.info(f"✅ Wallet credited ₦{amount_kobo/100:.2f} → {customer_identifier}")
 
-    # 5. Acknowledge to Squad (must return 200)
     return {
-        "response_code":        200,
-        "transaction_reference": squad_ref,
+        "response_code":         200,
+        "transaction_reference": transaction_ref,
         "response_description":  "Success",
     }

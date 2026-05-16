@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../data/models/job_model.dart';
+import '../../../discovery/data/job_model.dart';
 
 class FilterNotifier extends Notifier<JobFilter> {
   @override
