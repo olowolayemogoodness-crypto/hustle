@@ -4,7 +4,11 @@
 
 Hustle backend is a FastAPI-based matching and job platform MVP with ML-powered worker ranking, real-time feedback loops, and production-ready async database handling.
 
-**Status:** MVP Complete ✅ | Tests: 76/94 passing | Latest: Phase 2.6 (Ranking Observability)
+**Status:** MVP Complete ✅ | Tests: 92 passed, 2 skipped | Latest: Phase 2.6 (Ranking Observability)
+
+---
+
+Phase 2 documentation (Risk → Calibration → Observability) has been consolidated into `PHASE_2_COMBINED.md` in this folder. Original Phase 2.x draft files were archived or removed to reduce duplication.
 
 ---
 
