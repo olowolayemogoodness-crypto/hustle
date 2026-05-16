@@ -10,8 +10,8 @@ class MatchRequest(BaseModel):
 
 
 class MatchExplanation(BaseModel):
-    strengths: List[str]
-    warnings: List[str]
+    primary_reason: str
+    factors: List[str]
 
 
 class WorkerScore(BaseModel):
@@ -64,6 +64,8 @@ class MatchHistoryEntry(BaseModel):
     dispute_occurred: bool
     employer_rating: float | None = None
     worker_rating: float | None = None
+    completion_risk_probability: float | None = None
+    risk_factors: str | None = None
     created_at: str | None = None
     updated_at: str | None = None
 

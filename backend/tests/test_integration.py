@@ -4,7 +4,7 @@ from app.schemas.job import JobBase
 from app.schemas.worker import WorkerResponse
 from app.schemas.match import WorkerScore, MatchExplanation
 from app.services.matching_engine import rank_candidates
-from app.services.decision_engine import select_recommended_workers
+from app.api.v1.endpoints.match import select_recommended_workers
 
 
 class TestIntegration:
@@ -76,7 +76,7 @@ class TestIntegration:
                 confidence=0.80,
                 trust_score=0.75,
                 profile_completeness=0.90,
-                explanation=MatchExplanation(strengths=["great"], warnings=[]),
+                explanation=MatchExplanation(primary_reason="Skill match", factors=["great"]),
                 metadata={},
             ),
             WorkerScore(
@@ -88,7 +88,7 @@ class TestIntegration:
                 confidence=0.70,
                 trust_score=0.65,
                 profile_completeness=0.80,
-                explanation=MatchExplanation(strengths=["good"], warnings=[]),
+                explanation=MatchExplanation(primary_reason="Good fit", factors=["good"]),
                 metadata={},
             ),
             WorkerScore(
@@ -100,12 +100,12 @@ class TestIntegration:
                 confidence=0.50,
                 trust_score=0.50,
                 profile_completeness=0.60,
-                explanation=MatchExplanation(strengths=[], warnings=["low score"]),
+                explanation=MatchExplanation(primary_reason="Low match", factors=["low score"]),
                 metadata={},
             ),
         ]
 
-        recommended = select_recommended_workers(workers, max_recommended=2, min_score_threshold=0.6)
+        recommended = select_recommended_workers(workers, max_recommended=2)
         assert len(recommended) == 2
         assert recommended == [1, 2]
 

@@ -146,6 +146,8 @@ async def get_match_history(
             dispute_occurred=log.dispute_occurred,
             employer_rating=log.employer_rating,
             worker_rating=log.worker_rating,
+            completion_risk_probability=log.completion_risk_probability,
+            risk_factors=log.risk_factors,
             created_at=str(log.created_at) if log.created_at else None,
             updated_at=str(log.updated_at) if log.updated_at else None,
         )

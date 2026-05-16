@@ -45,7 +45,44 @@ def extract_log_features(match_log: Any) -> np.ndarray:
     return np.asarray(values, dtype=float)
 
 
-def build_feature_dataframe(match_logs: Iterable[Any]) -> pd.DataFrame:
-    """Convert a sequence of MatchLog-like objects into a pandas DataFrame."""
-    rows = [dict(zip(FEATURE_COLUMNS, extract_log_features(log))) for log in match_logs]
+def extract_match_features(job: Any, worker: Any, rule_score: float) -> np.ndarray:
+    """Extract features for ML prediction from job, worker, and rule_score."""
+    values = [
+        _safe_float(getattr(worker, "distance_km", None)),
+        _safe_float(getattr(worker, "skill_overlap", None)),
+        _safe_float(getattr(worker, "rating", None)),
+        _safe_float(getattr(worker, "completion_rate", None)),
+        _safe_float(getattr(worker, "trust_score", None)),
+        _safe_float(getattr(worker, "completed_jobs", None)),
+        _safe_float(getattr(job, "budget", None)),
+        _safe_float(getattr(job, "urgency", None)),
+        rule_score,
+    ]
+    return np.asarray(values, dtype=float)
+
+
+def features_from_dict(data: dict) -> np.ndarray:
+    """
+    Extract features for ML prediction from a dictionary.
+    
+    Expected keys: distance_km, skill_overlap, rating, completion_rate,
+                   disputes (optional), availability (optional)
+    """
+    values = [
+        _safe_float(data.get("distance_km", None)),
+        _safe_float(data.get("skill_overlap", None)),
+        _safe_float(data.get("rating", None)),
+        _safe_float(data.get("completion_rate", None)),
+        _safe_float(data.get("trust_score", None)),
+        _safe_float(data.get("completed_jobs", None)),
+        _safe_float(data.get("job_budget", None)),
+        _safe_float(data.get("job_urgency", None)),
+        _safe_float(data.get("rule_score", 0.5)),  # Default to 0.5 if not provided
+    ]
+    return np.asarray(values, dtype=float)
+
+
+def build_feature_dataframe(match_logs: list[object]) -> pd.DataFrame:
+    """Build a pandas DataFrame from a list of match log objects."""
+    rows = [extract_log_features(log) for log in match_logs]
     return pd.DataFrame(rows, columns=FEATURE_COLUMNS)

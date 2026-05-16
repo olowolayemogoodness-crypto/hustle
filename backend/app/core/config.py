@@ -120,6 +120,49 @@ class Settings(BaseSettings):
     ] = "INFO"
 
     # =========================================================
+    # ML MODELS
+    # =========================================================
+    @computed_field
+    @property
+    def ml_models_dir(self) -> Path:
+        return ROOT_DIR / "app" / "ml" / "models"
+
+    # =========================================================
+    # OBSERVABILITY & DEBUG
+    # =========================================================
+    enable_match_debug: bool = Field(
+        default=False,
+        description="Enable detailed ranking trace logging",
+    )
+    
+    enable_ranking_trace: bool = Field(
+        default=True,
+        description="Enable ranking trace capture for debugging",
+    )
+
+    # =========================================================
+    # MATCHING
+    # =========================================================
+    max_worker_search_radius: int = Field(
+        default=50,
+        description="Maximum distance in km for worker search radius",
+        gt=0,
+    )
+    
+    max_workers_evaluated: int = Field(
+        default=100,
+        description="Maximum number of workers to evaluate per job",
+        gt=0,
+    )
+    
+    match_threshold: float = Field(
+        default=20.0,
+        description="Minimum score threshold for workers to be ranked",
+        ge=0.0,
+        le=100.0,
+    )
+
+    # =========================================================
     # CORS
     # =========================================================
     allowed_origins: list[str] = [

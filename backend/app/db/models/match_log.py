@@ -52,10 +52,15 @@ class MatchLog(Base):
         nullable=False,
     )
 
-    confidence: Mapped[float] = mapped_column(
+    completion_risk_probability: Mapped[float | None] = mapped_column(
         Float,
-        nullable=False,
+        nullable=True,
     )
+
+    risk_factors: Mapped[str | None] = deferred(mapped_column(
+        String,
+        nullable=True,
+    ))
 
     status: Mapped[str] = mapped_column(
         String(20),

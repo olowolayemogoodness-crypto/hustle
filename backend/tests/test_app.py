@@ -137,7 +137,7 @@ def test_match_endpoint_returns_sorted_matches(client):
 
 @pytest.mark.asyncio
 async def test_accept_match_endpoint(db_session):
-    from app.api.match import match
+    from app.api.v1.endpoints.match import match, accept_match
     from app.schemas.match import MatchRequest, AcceptMatchRequest
 
     payload = build_match_payload()
@@ -146,14 +146,13 @@ async def test_accept_match_endpoint(db_session):
     assert result.recommended_worker_ids
 
     accept_req = AcceptMatchRequest(job_id=1, worker_id=result.recommended_worker_ids[0])
-    from app.api.match import accept_match
     accept_result = await accept_match(accept_req, db_session)
     assert accept_result.accepted is True
 
 
 @pytest.mark.asyncio
 async def test_match_history_endpoint(db_session):
-    from app.api.match import match, get_match_history
+    from app.api.v1.endpoints.match import match, get_match_history
     from app.schemas.match import MatchRequest
 
     payload = build_match_payload()
@@ -167,8 +166,8 @@ async def test_match_history_endpoint(db_session):
 
 @pytest.mark.asyncio
 async def test_feedback_endpoint(db_session):
-    from app.api.match import match, accept_match
-    from app.api.feedback import submit_feedback
+    from app.api.v1.endpoints.match import match, accept_match
+    from app.api.v1.endpoints.feedback import submit_feedback
     from app.schemas.match import MatchRequest, AcceptMatchRequest
     from app.schemas.feedback import FeedbackRequest
 

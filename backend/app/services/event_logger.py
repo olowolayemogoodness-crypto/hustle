@@ -22,7 +22,8 @@ class MatchEventRecord:
     rule_score: float
     ml_probability: float
     risk_penalty: float
-    confidence: float
+    completion_risk_probability: float | None = None
+    risk_factors: str | None = None
     status: str = "ranked"
 
 
@@ -42,7 +43,8 @@ def worker_scores_to_events(
             rule_score=worker.rule_score,
             ml_probability=worker.ml_probability,
             risk_penalty=worker.risk_penalty,
-            confidence=worker.confidence,
+            completion_risk_probability=worker.metadata.get("completion_risk_probability"),
+            risk_factors=worker.metadata.get("risk_factors"),
             status="ranked",
         )
         events.append(event)

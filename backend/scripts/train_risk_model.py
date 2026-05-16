@@ -16,18 +16,18 @@ if os.getenv("DATABASE_URL") and not os.getenv("HUSTLE_DATABASE_URL"):
     os.environ["HUSTLE_DATABASE_URL"] = os.getenv("DATABASE_URL")
 
 from app.db.session import AsyncSessionLocal
-from app.ml.training.dataset_builder import build_dataset
-from app.ml.training.train_acceptance_model import train_acceptance_model
+from app.ml.training.risk_dataset_builder import build_risk_dataset
+from app.ml.training.train_risk_model import train_risk_model
 from app.ml.calibration import PlattScaler
 from app.core.config import settings
 
 
 def get_model_path() -> Path:
-    return ROOT_DIR / "app" / "ml" / "models" / "acceptance_model.joblib"
+    return ROOT_DIR / "app" / "ml" / "models" / "risk_model.joblib"
 
 
 def get_calibration_path() -> Path:
-    return ROOT_DIR / "app" / "ml" / "models" / "acceptance_calibration.joblib"
+    return ROOT_DIR / "app" / "ml" / "models" / "risk_calibration.joblib"
 
 
 def validate_database_url() -> None:
@@ -46,7 +46,7 @@ async def run_training() -> None:
     validate_database_url()
 
     async with AsyncSessionLocal() as session:
-        X, y = await build_dataset(session)
+        X, y = await build_risk_dataset(session)
 
     # Split into train/test first
     X_train, X_test, y_train, y_test = train_test_split(
@@ -68,11 +68,11 @@ async def run_training() -> None:
 
     # Train main model on train split
     output_path = get_model_path()
-    model, metrics = train_acceptance_model(
+    model, metrics = train_risk_model(
         X_train, y_train, output_path, test_size=0.0, random_state=42
     )
 
-    print("Model training complete")
+    print("Risk model training complete")
     print(f"Model saved to: {output_path}")
     print("Evaluation metrics:")
     for key, value in metrics.items():

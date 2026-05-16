@@ -5,12 +5,14 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.v1.endpoints.health   import router as health_router
+from app.api.v1.endpoints.health    import router as health_router
 from app.api.v1.endpoints.match    import router as match_router
 from app.api.v1.endpoints.feedback import router as feedback_router
 from app.api.v1.endpoints.wallet   import router as wallet_router
 from app.api.v1.endpoints.auth     import router as auth_router
 from app.api.v1.endpoints.webhook  import router as webhook_router
+from app.api.v1.endpoints.predict  import router as predict_router
+from app.api.v1.endpoints.analytics import router as analytics_router
 
 from app.core.config     import settings
 from app.core.logging    import configure_logging, get_logger
@@ -51,6 +53,8 @@ async def log_requests(request: Request, call_next):
 app.include_router(health_router)
 app.include_router(match_router)
 app.include_router(feedback_router)
+app.include_router(predict_router)
+app.include_router(analytics_router)
 
 # ── these need the prefix added
 app.include_router(auth_router,     prefix="/api/v1")
