@@ -37,25 +37,36 @@ class WorkerProfile {
 
 
   // lib/features/profile/data/models/profile_model.dart
-
 factory WorkerProfile.fromBackend(Map<String, dynamic> json) {
+  final skills = List<String>.from(json['skills'] ?? []);
+  final avgRating = (json['avg_rating'] as num?)?.toDouble() ?? 0.0;
+  final trustScore = (json['trust_score'] as num?)?.toDouble() ?? 50.0;
+  final totalJobs = json['total_jobs'] as int? ?? 0;
+
+  // Calculate top percentile label
+  String percentile = 'New Worker';
+  if (totalJobs >= 50) percentile = 'Top 5% in your area';
+  else if (totalJobs >= 20) percentile = 'Top 10% in your area';
+  else if (totalJobs >= 10) percentile = 'Top 25% in your area';
+
   return WorkerProfile(
     id:             json['user_id'] as String,
     fullName:       json['full_name'] as String? ?? 'Worker',
     avatarUrl:      json['avatar_url'] as String?,
-    skills:         List<String>.from(json['skills'] ?? []),
-    primarySkills:  List<String>.from(
-                        (json['skills'] as List?)?.take(3) ?? []),
-    location:       'Lagos',
-    joinedAt:       DateTime.now(),
-    totalJobs:      json['total_jobs'] as int? ?? 0,
-    trustScore:     (json['trust_score'] as num?)?.toDouble() ?? 50.0,
+    skills:         skills,
+    primarySkills:  skills.take(3).toList(),
+    location:       'Lagos, Nigeria',
+    joinedAt:       json['created_at'] != null
+                        ? DateTime.parse(json['created_at'] as String)
+                        : DateTime.now(),
+    totalJobs:      totalJobs,
+    trustScore:     avgRating > 0 ? avgRating : (trustScore / 20),
     completionRate: (json['completion_rate'] as num?)?.toDouble() ?? 0.0,
-    disputesCount:  0,
-    ratingsCount:   0,
+    disputesCount:  json['disputes_count'] as int? ?? 0,
+    ratingsCount:   totalJobs,
     isVerified:     json['is_verified'] as bool? ?? false,
-    topPercentile:  'New Worker',
-    reviews:        const [],
+    topPercentile:  percentile,
+    reviews:        const [],  // fetch separately from ratings endpoint
   );
 }
 

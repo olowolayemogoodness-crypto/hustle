@@ -41,6 +41,7 @@ def _worker_to_dict(profile: WorkerProfile) -> dict:
     }
 
 
+
 @router.get("/worker")
 async def get_my_worker_profile(
     current_user: User = Depends(get_current_user),
@@ -52,8 +53,26 @@ async def get_my_worker_profile(
     profile = result.scalar_one_or_none()
     if not profile:
         raise HTTPException(status_code=404, detail="Worker profile not found")
-    return _worker_to_dict(profile)
 
+    return {
+        "user_id":         str(current_user.id),
+        "full_name":       current_user.full_name,
+        "avatar_url":      current_user.avatar_url,
+        "email":           current_user.email,
+        "skills":          profile.skills or [],
+        "experience_level": profile.experience_level,
+        "job_radius_km":   profile.job_radius_km,
+        "availability":    profile.availability,
+        "bio":             profile.bio,
+        "trust_score":     profile.trust_score,
+        "completion_rate": profile.completion_rate,
+        "avg_rating":      profile.avg_rating,
+        "total_jobs":      profile.total_jobs,
+        "disputes_count":  profile.disputes_count,
+        "is_verified":     profile.is_verified,
+        "is_available":    profile.is_available,
+        "created_at":      profile.created_at.isoformat() if profile.created_at else None,
+    }
 
 @router.put("/worker")
 async def update_worker_profile(

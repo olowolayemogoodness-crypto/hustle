@@ -1,6 +1,9 @@
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:hustle/core/network/dio_client.dart';
+import 'package:hustle/features/profile/presentation/providers/profile_provider.dart';
 import 'package:hustle/features/profile/presentation/screens/worker_profile_screen.dart';
 import '../../../../core/config/theme.dart';
 import '../../../../core/utils/formatters.dart';
@@ -56,7 +59,12 @@ class DiscoveryScreen extends ConsumerWidget {
 class _DiscoveryHeader extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final profileAsync = ref.watch(profileProvider);
     final greeting = _getGreeting();
+    
+    final name = profileAsync.whenOrNull(
+      data: (p) => p.fullName.split(' ').first,
+    ) ?? 'there';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -71,7 +79,7 @@ class _DiscoveryHeader extends ConsumerWidget {
                   text: TextSpan(
                     children: [
                       TextSpan(
-                        text: '$greeting, Emeka ',
+                        text: '$greeting, $name ',
                         style: const TextStyle(
                           fontFamily: 'Syne',
                           fontSize: 19,
@@ -86,65 +94,39 @@ class _DiscoveryHeader extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.success,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    const Text(
-                      'Lagos, Mainland',
-                      style: TextStyle(
-                        fontFamily: 'DMSans',
-                        fontSize: 13,
-                        fontWeight: FontWeight.w500,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ],
-                ),
+                // ... rest unchanged
               ],
             ),
           ),
-          
-           
-            _AvatarWithBadge(),
+          _AvatarWithBadge(
+            initials: name.isNotEmpty ? name[0].toUpperCase() : 'W',
+          ),
         ],
       ),
     );
   }
-
-  String _getGreeting() {
-    final hour = DateTime.now().hour;
-    if (hour < 12) return 'Good morning';
-    if (hour < 17) return 'Good afternoon';
-    return 'Good evening';
-  }
 }
 
 class _AvatarWithBadge extends StatelessWidget {
+  const _AvatarWithBadge({this.initials = 'W'});
+  final String initials;
+
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: ()=> Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) =>  WorkerProfileScreen()),
-            ),
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const WorkerProfileScreen()),
+      ),
       child: Stack(
         clipBehavior: Clip.none,
         children: [
           CircleAvatar(
             radius: 24,
             backgroundColor: AppColors.borderLight,
-            child: const Text(
-              'E',
-              style: TextStyle(
+            child: Text(
+              initials,
+              style: const TextStyle(
                 fontFamily: 'Syne',
                 fontWeight: FontWeight.w700,
                 fontSize: 18,
@@ -803,23 +785,96 @@ class _StarRow extends StatelessWidget {
   }
 }
 
-class _ApplyButton extends StatelessWidget {
+class _ApplyButton extends ConsumerStatefulWidget {
   const _ApplyButton({required this.job, required this.accentColor});
   final JobListing job;
   final Color accentColor;
 
   @override
+  ConsumerState<_ApplyButton> createState() => _ApplyButtonState();
+}
+
+class _ApplyButtonState extends ConsumerState<_ApplyButton> {
+  bool _loading  = false;
+  bool _applied  = false;
+
+  Future<void> _apply() async {
+    setState(() => _loading = true);
+    try {
+      await DioClient.instance.post(
+        '/api/v1/applications',
+        data: {'job_id': widget.job.id},
+      );
+      setState(() => _applied = true);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Application submitted!'),
+            backgroundColor: AppColors.primaryGreen,
+          ),
+        );
+      }
+    } on DioException catch (e) {
+      if (mounted) {
+        final msg = e.response?.data['detail'] ?? 'Failed to apply';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(msg)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    if (job.isQuickApply) {
+    if (_applied) {
+      return Container(
+        width: double.infinity,
+        height: 42,
+        decoration: BoxDecoration(
+          color: AppColors.primaryGreenLight,
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: const Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.check_circle_rounded,
+                  size: 16, color: AppColors.primaryGreen),
+              SizedBox(width: 6),
+              Text(
+                'Applied',
+                style: TextStyle(
+                  fontFamily: 'DMSans',
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryGreen,
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (widget.job.isQuickApply) {
       return SizedBox(
         width: double.infinity,
         height: 42,
         child: ElevatedButton.icon(
-          onPressed: () {},
-          icon: const Icon(Icons.bolt_rounded, size: 16, color: Colors.white),
-          label: const Text(
-            'Quick Apply',
-            style: TextStyle(
+          onPressed: _loading ? null : _apply,
+          icon: _loading
+              ? const SizedBox(
+                  width: 16, height: 16,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2, color: Colors.white,
+                  ),
+                )
+              : const Icon(Icons.bolt_rounded, size: 16, color: Colors.white),
+          label: Text(
+            _loading ? 'Applying...' : 'Quick Apply',
+            style: const TextStyle(
               fontFamily: 'DMSans',
               fontSize: 13.5,
               fontWeight: FontWeight.w700,
@@ -828,7 +883,7 @@ class _ApplyButton extends StatelessWidget {
           ),
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.primaryGreen,
-            foregroundColor: Colors.white,
+            disabledBackgroundColor: AppColors.primaryGreen.withOpacity(0.6),
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -842,22 +897,29 @@ class _ApplyButton extends StatelessWidget {
       width: double.infinity,
       height: 42,
       child: OutlinedButton(
-        onPressed: () {},
+        onPressed: _loading ? null : _apply,
         style: OutlinedButton.styleFrom(
-          foregroundColor: accentColor,
-          side: BorderSide(color: accentColor, width: 1.5),
+          foregroundColor: widget.accentColor,
+          side: BorderSide(color: widget.accentColor, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
           ),
         ),
-        child: const Text(
-          'Apply Now',
-          style: TextStyle(
-            fontFamily: 'DMSans',
-            fontSize: 13.5,
-            fontWeight: FontWeight.w700,
-          ),
-        ),
+        child: _loading
+            ? SizedBox(
+                width: 16, height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2, color: widget.accentColor,
+                ),
+              )
+            : const Text(
+                'Apply Now',
+                style: TextStyle(
+                  fontFamily: 'DMSans',
+                  fontSize: 13.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
       ),
     );
   }
@@ -865,3 +927,9 @@ class _ApplyButton extends StatelessWidget {
 
 // ─────────────────────────── Bottom Nav ────────────────────────────
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
