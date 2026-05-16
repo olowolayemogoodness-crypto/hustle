@@ -7,6 +7,7 @@ pytest_cache/
 *.pyd
 .Python
 env/
+.env
 venv/
 ENV/
 build/
