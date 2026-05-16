@@ -3,7 +3,7 @@ from typing import List, Optional
 
 
 class WorkerBase(BaseModel):
-    id: int
+    id: str | int
     name: str
     skills: List[str]
     distance_km: Optional[float] = Field(None, ge=0)

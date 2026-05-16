@@ -47,6 +47,12 @@ class MatchLog(Base):
         nullable=False,
     )
 
+    confidence: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+        default=0.0,
+    )
+
     risk_penalty: Mapped[float] = mapped_column(
         Float,
         nullable=False,

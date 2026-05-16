@@ -1,44 +1,3 @@
-import os
-import asyncio
-from pathlib import Path
-from fastapi.testclient import TestClient
-
-DB_PATH = Path('sample_test.db').resolve()
-if DB_PATH.exists():
-    try:
-        DB_PATH.unlink()
-    except Exception:
-        pass
-
-os.environ['HUSTLE_DATABASE_URL'] = f'sqlite+aiosqlite:///{DB_PATH.as_posix()}'
-os.environ['HUSTLE_TESTING'] = '1'
-
-from app.db.init_db import init_models
-from app.main import app
-
-# Initialize DB and then close the event loop properly
-async def main():
-    await init_models()
-
-asyncio.run(main())
-
-# Create a new event loop for TestClient
-client = TestClient(app)
-
-print('ROOT', client.get('/').json())
-print('LIVE', client.get('/health/live').status_code, client.get('/health/live').json())
-print('READY', client.get('/health/ready').status_code, client.get('/health/ready').json())
-
-predict_payload = {
-    'distance_km': 2.5,
-    'skill_overlap': 0.8,
-    'rating': 4.9,
-    'completion_rate': 0.95,
-    'disputes': 0,
-    'availability': 0.9,
-}
-print('PREDICT', client.post('/api/v1/predict', json=predict_payload).json())
-
 match_payload = {
     'job': {
         'id': 1,
@@ -82,47 +41,20 @@ match_payload = {
     ],
 }
 
-match_resp = client.post('/api/v1/match', json=match_payload)
-print('MATCH', match_resp.status_code, match_resp.json())
-match_json = match_resp.json()
-ranked_workers = match_json.get('ranked_workers', [])
-worker_id = ranked_workers[0]['worker_id'] if ranked_workers else 101
-accept_resp = client.post('/api/v1/match/accept', json={'job_id': 1, 'worker_id': worker_id})
-print('ACCEPT', accept_resp.status_code, accept_resp.json())
-
-status_resp = client.post('/api/v1/match/status', json={'match_log_id': f'1-{worker_id}', 'status': 'viewed'})
-print('STATUS', status_resp.status_code, status_resp.json())
-
-history_resp = client.get('/api/v1/match/history/1')
-print('HISTORY', history_resp.status_code, history_resp.json())
-
-feedback_resp = client.post('/api/v1/feedback/', json={
-    'match_log_id': str(accept_resp.json().get('match_log_id')),
-    'completed': True,
-    'dispute_occurred': False,
-    'employer_rating': 5.0,
-    'worker_rating': 4.8,
-})
-print('FEEDBACK', feedback_resp.status_code, feedback_resp.json())
-
-analytics_resp = client.get('/api/v1/analytics/matches')
-print('ANALYTICS', analytics_resp.status_code, analytics_resp.json())
-
-
-def test_root_endpoint():
+def test_root_endpoint(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "message" in response.json()
 
 
-def test_health_endpoints_exist():
+def test_health_endpoints_exist(client):
     live = client.get("/health/live")
     ready = client.get("/health/ready")
     assert live.status_code == 200
     assert ready.status_code in {200, 503}
 
 
-def test_match_endpoint_returns_ranked_workers():
+def test_match_endpoint_returns_ranked_workers(client):
     response = client.post("/api/v1/match", json=match_payload)
     assert response.status_code == 200
     result = response.json()
@@ -130,7 +62,7 @@ def test_match_endpoint_returns_ranked_workers():
     assert isinstance(result.get("recommended_worker_ids"), list)
 
 
-def test_match_accept_and_status_history_workflow():
+def test_match_accept_and_status_history_workflow(client):
     response = client.post("/api/v1/match", json=match_payload)
     assert response.status_code == 200
     result = response.json()
@@ -147,12 +79,12 @@ def test_match_accept_and_status_history_workflow():
     assert history_resp.status_code in {200, 400}
 
 
-def test_feedback_endpoint_is_available():
+def test_feedback_endpoint_is_available(client):
     response = client.post("/api/v1/feedback/", json={})
     assert response.status_code in {422, 400}
 
 
-def test_auth_and_wallet_routes_are_registered():
+def test_auth_and_wallet_routes_are_registered(client):
     assert client.post("/api/v1/auth/otp/send", json={}).status_code == 422
     assert client.post("/api/v1/auth/role", json={}).status_code == 401
     assert client.get("/api/v1/wallet/balance").status_code == 401
@@ -161,6 +93,6 @@ def test_auth_and_wallet_routes_are_registered():
     assert client.post("/api/v1/wallet/withdraw", json={}).status_code == 401
 
 
-def test_webhook_route_requires_signature():
-    response = client.post("/webhook/squad", json={})
+def test_webhook_route_requires_signature(client):
+    response = client.post("/api/v1/webhook/squad", json={})
     assert response.status_code == 400

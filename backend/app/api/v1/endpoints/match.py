@@ -2,6 +2,7 @@
 from sqlalchemy import select
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import undefer
 
 from app.core.config import settings
 from app.core.logging import get_logger
@@ -128,7 +129,12 @@ async def get_match_history(
     except (TypeError, ValueError):
         raise HTTPException(status_code=400, detail="Invalid job_id format")
 
-    stmt = select(MatchLog).where(MatchLog.job_id == parsed_job_id).order_by(MatchLog.created_at.desc())
+    stmt = (
+        select(MatchLog)
+        .where(MatchLog.job_id == parsed_job_id)
+        .order_by(MatchLog.created_at.desc())
+        .options(undefer(MatchLog.risk_factors))
+    )
     result = await db.execute(stmt)
     logs = result.scalars().all()
 

@@ -312,7 +312,7 @@ For issues, questions, or contributions:
 1. Check test output: `pytest tests/ -v --tb=short`
 2. Review logs: `tail -f app.log`
 3. Check config: `app/core/config.py`
-4. See detailed notes: `PHASE_2.5_NOTES.md`, `PHASE_2_6_IMPLEMENTATION.md`
+4. See detailed notes in our version 1 docs: `PHASE_2.5_NOTES.md`, `PHASE_2_6_IMPLEMENTATION.md`
 
 ---
 

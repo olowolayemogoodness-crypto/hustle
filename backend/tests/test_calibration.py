@@ -215,8 +215,8 @@ class TestScoringStability:
         )
         assert 0.0 <= score <= 100.0
         
-        # Expected: 0.7 * 70 + 0.3 * 0.8 - 0.1 * 15 = 49 + 0.24 - 1.5 = 47.74
-        assert 47.0 <= score <= 48.0
+        # Expected: 0.7 * (70/100) + 0.3 * 0.8 - 0.1 * 0.15 = 0.49 + 0.24 - 0.015 = 0.715
+        assert 0.71 <= score <= 0.72
 
     def test_final_score_with_extreme_values(self):
         """Test score calculation with extreme values."""

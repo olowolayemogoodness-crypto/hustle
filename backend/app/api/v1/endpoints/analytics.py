@@ -18,6 +18,7 @@ class AnalyticsResponse(BaseModel):
     total_matches: int = Field(default=0, ge=0, description="Total number of matches")
     average_match_score: float = Field(default=0.0, ge=0.0, le=1.0, description="Average match score")
     acceptance_rate: float = Field(default=0.0, ge=0.0, le=1.0, description="Acceptance rate")
+    completion_rate: float = Field(default=0.0, ge=0.0, le=1.0, description="Average worker completion rate")
     completed_matches: int = Field(default=0, ge=0, description="Number of completed matches")
     disputed_matches: int = Field(default=0, ge=0, description="Number of disputed matches")
 
@@ -47,6 +48,7 @@ async def get_match_analytics(db: AsyncSession = Depends(get_db)) -> AnalyticsRe
                 total_matches=0,
                 average_match_score=0.0,
                 acceptance_rate=0.0,
+                completion_rate=0.0,
                 completed_matches=0,
                 disputed_matches=0,
             )
@@ -67,6 +69,11 @@ async def get_match_analytics(db: AsyncSession = Depends(get_db)) -> AnalyticsRe
         completed_result = await db.execute(completed_stmt)
         completed_count = completed_result.scalar() or 0
         
+        # Get average worker completion rate
+        completion_rate_stmt = select(func.avg(MatchLog.worker_completion_rate))
+        completion_rate_result = await db.execute(completion_rate_stmt)
+        completion_rate = float(completion_rate_result.scalar() or 0.0)
+
         # Get disputed matches
         disputed_stmt = select(func.count(MatchLog.id)).where(MatchLog.dispute_occurred == True)
         disputed_result = await db.execute(disputed_stmt)
@@ -76,6 +83,7 @@ async def get_match_analytics(db: AsyncSession = Depends(get_db)) -> AnalyticsRe
             total_matches=total_matches,
             average_match_score=average_score,
             acceptance_rate=min(1.0, acceptance_rate),
+            completion_rate=min(1.0, completion_rate),
             completed_matches=completed_count,
             disputed_matches=disputed_count,
         )
@@ -85,6 +93,7 @@ async def get_match_analytics(db: AsyncSession = Depends(get_db)) -> AnalyticsRe
             total_matches=0,
             average_match_score=0.0,
             acceptance_rate=0.0,
+            completion_rate=0.0,
             completed_matches=0,
             disputed_matches=0,
         )
